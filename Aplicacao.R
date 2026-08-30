@@ -17,7 +17,7 @@
 # numerical differentiation is performed with base R.
 # =============================================================================
 
-required <- c("boot", "survival", "dplyr")
+required <- c("boot", "survival", "dplyr", "xtable")
 missing_packages <- required[!vapply(required, requireNamespace,
                                      quietly = TRUE, FUN.VALUE = logical(1))]
 if (length(missing_packages)) {
@@ -98,15 +98,15 @@ loglik_joint_unconstrained <- function(par, X, Z, time, event, cause_other,
 # ------------------------------- EM algorithm --------------------------------
 
 fit_vertical_pt_em <- function(data, K = 4L, cuts = NULL,
-                               count_formula = ~ sexo_reg + IDADE + ano + catend_reg + diagprev_reg + 
+                               count_formula = ~ sexo_reg + IDADE + ano + catend_reg  + 
                                  ecgrup_2_3_reg + ecgrup_4_reg + m_reg + 
                                  RADIO + QUIMIO + CIRURGIA,
-                               cause_formula = ~ log_time + sexo_reg + IDADE + ano + catend_reg + diagprev_reg + 
+                               cause_formula = ~ log_time + sexo_reg + IDADE + ano + catend_reg  + 
                                  ecgrup_2_3_reg + ecgrup_4_reg + m_reg + 
                                  RADIO + QUIMIO + CIRURGIA,
                                start = NULL, tol = 1e-6, maxit = 1000L,
                                trace = FALSE, compute_se = TRUE, scaling = NULL) {
-  vars <- c("time", "status", "sexo_reg", "IDADE", "ano", "catend_reg", "diagprev_reg", 
+  vars <- c("time", "status", "sexo_reg", "IDADE", "ano", "catend_reg", 
             "ecgrup_2_3_reg", "ecgrup_4_reg", "m_reg", 
             "RADIO", "QUIMIO", "CIRURGIA")
   if (!all(vars %in% names(data))) stop("Missing variables: ",
@@ -527,7 +527,7 @@ print.vertical_pt_em <- function(x, ...) {
 
 # ------------------------------- Data analysis -------------------------------
 
-mel <- dados_org %>% select(time, status, sexo_reg, IDADE, ano, catend_reg, diagprev_reg, 
+mel <- dados_org %>% select(time, status, sexo_reg, IDADE, ano, catend_reg,  
                             ecgrup_2_3_reg, ecgrup_4_reg, m_reg, RADIO, QUIMIO, CIRURGIA) %>% 
   mutate(status = case_when(status == 0 ~ 2,
                             status == 1 ~ 1,
@@ -545,7 +545,6 @@ profile_nicolaie <- data.frame(
   IDADE = mean(mel$IDADE),
   ano = mean(mel$ano),
   catend_reg = 1,
-  diagprev_reg = 1,
   ecgrup_2_3_reg = 0,
   ecgrup_4_reg =1,
   m_reg = 1,  
@@ -572,7 +571,7 @@ cat("Bootstrap successful fits:", boot_melanoma$successful, "of", B_BOOT, "\n")
 # Profile-specific cure probability and its bootstrap percentile interval.
 cure_band <- boot_melanoma$bands$cure_probability
 cure_summary <- data.frame(
-  profile = "Male, ulceration, continuous covariates at their means",
+  profile = "Female, SUS, EC group 4, metastase, with only surgery, continuous covariates at their means",
   estimate = cure_band$estimate[1], lower.95 = cure_band$lower[1],
   upper.95 = cure_band$upper[1])
 print(cure_summary, digits = 4, row.names = FALSE)
@@ -586,6 +585,7 @@ plot_nicolaie_figures(
 
 # The same figure on the active graphics device.
 plot_nicolaie_figures(fit_melanoma, boot_melanoma)
+# 9 6
 
 # Basic diagnostics required before reporting bootstrap inference.
 diagnostics <- list(
