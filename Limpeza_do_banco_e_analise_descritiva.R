@@ -91,14 +91,13 @@ plot.cuminc(
 # Gráfico FIA SEXO ----
 png("fia_graf_cov.png",
     width = 5800,
-    height = 5500,
+    height = 4400,
     res = 300)
 layout(matrix(c(
   1, 2, 0, 3, 4,
   5, 6, 0, 7, 8,
   9, 10, 0, 11, 12,
-  13, 14, 0, 15, 16,
-  17, 18, 0, 19,20), nrow = 5, byrow = TRUE),
+  13, 14, 0, 15, 16), nrow = 4, byrow = TRUE),
   widths = c(1, 1, 0.15, 1, 1))
 
 par(mar = c(5, 3, 4, 1),
@@ -143,49 +142,6 @@ plot.cuminc(
   curvlab = c("Feminino",
               "Masculino"),
   main = "Morte por outras causas")
-
-
-# Gráfico FIA IDADE ----
-fia_idade <- cuminc(
-  ftime   = dados_org$time,
-  fstatus = dados_org$status,
-  group   = dados_org$idade_cat,
-  cencode = 0)
-
-#Causa 1
-plot.cuminc(
-  fia_idade[c(1:2)],
-  lty = 1,
-  lwd = 2,
-  ylim = c(0,0.7),
-  cex.axis =1.4,
-  cex.lab=1.4,
-  cex.main = 1.6,
-  cex = 1.4,  
-  col = cores, 
-  xlab = "Tempo (dias)",
-  ylab = "FIA",
-  curvlab = c("Até 60 anos",
-              "Mais de 60 anos"),
-  main = "Morte por câncer")
-
-#Causa 2
-plot.cuminc(
-  fia_idade[c(3,4)],
-  lty = 1,
-  lwd = 2,
-  ylim = c(0,0.7),
-  cex.axis =1.4,
-  cex.lab=1.4,
-  cex.main = 1.6,
-  cex = 1.4,  
-  col = cores, 
-  xlab = "Tempo (dias)",
-  ylab = "FIA",
-  curvlab = c("Até 60 anos",
-              "Mais de 60 anos"),
-  main = "Morte por outras causas")
-
 
 # Gráfico FIA CATEATEND ----
 fia_cat <- cuminc(
@@ -506,4 +462,47 @@ dev.off()
 
 
 
+
+
+#####################################
+# Gráfico FIA IDADE ----
+fia_idade <- cuminc(
+  ftime   = dados_org$time,
+  fstatus = dados_org$status,
+  group   = dados_org$idade_cat,
+  cencode = 0)
+
+#Causa 1
+plot.cuminc(
+  fia_idade[c(1:2)],
+  lty = 1,
+  lwd = 2,
+  ylim = c(0,0.7),
+  cex.axis =1.4,
+  cex.lab=1.4,
+  cex.main = 1.6,
+  cex = 1.4,  
+  col = cores, 
+  xlab = "Tempo (dias)",
+  ylab = "FIA",
+  curvlab = c("Até 60 anos",
+              "Mais de 60 anos"),
+  main = "Morte por câncer")
+
+#Causa 2
+plot.cuminc(
+  fia_idade[c(3,4)],
+  lty = 1,
+  lwd = 2,
+  ylim = c(0,0.7),
+  cex.axis =1.4,
+  cex.lab=1.4,
+  cex.main = 1.6,
+  cex = 1.4,  
+  col = cores, 
+  xlab = "Tempo (dias)",
+  ylab = "FIA",
+  curvlab = c("Até 60 anos",
+              "Mais de 60 anos"),
+  main = "Morte por outras causas")
 
