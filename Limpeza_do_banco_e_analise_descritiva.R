@@ -102,16 +102,11 @@ plot.cuminc(
 
 # Gráfico FIA Variáveis Explicativas----
 # Gráfico FIA Sexo
-png("fia_graf_cov.png",
-    width = 5800,
-    height = 4400,
+png("fia_graf_cov_1.png",
+    width = 3800,
+    height = 3000,
     res = 300)
-layout(matrix(c(
-  1, 2, 0, 3, 4,
-  5, 6, 0, 7, 8,
-  9, 10, 0, 11, 12,
-  13, 14, 0, 15, 16), nrow = 4, byrow = TRUE),
-  widths = c(1, 1, 0.15, 1, 1))
+layout(matrix(c(1, 2, 3, 4), nrow = 2, byrow = TRUE))
 
 par(mar = c(5, 3, 4, 1),
     oma = c(0, 0.1, 0, 0),
@@ -139,7 +134,7 @@ plot.cuminc(
   main = "Morte por câncer",
   curvlab = c("Feminino",
               "Masculino"))
-text(700, 0.7, "Sexo", font = 2, cex=1.4)
+text(600, 0.7, "Sexo", font = 2, cex=1.4)
 #Causa 2
 plot.cuminc(
   fia_sexo[c(3,4)],
@@ -156,7 +151,7 @@ plot.cuminc(
   curvlab = c("Feminino",
               "Masculino"),
   main = "Morte por outras causas")
-text(700, 0.7, "Sexo", font = 2, cex=1.4)
+text(600, 0.7, "Sexo", font = 2, cex=1.4)
 
 # Gráfico FIA CATEATEND
 fia_cat <- cuminc(
@@ -181,7 +176,7 @@ plot.cuminc(
   curvlab = c("Convênio/Particular",
               "SUS"),
   main = "Morte por câncer")
-text(2350, 0.7, "Caráter de atendimento", font = 2, cex=1.4)
+text(2150, 0.7, "Caráter de atendimento", font = 2, cex=1.4)
 #Causa 2
 plot.cuminc(
   fia_cat[c(3,4)],
@@ -198,9 +193,21 @@ plot.cuminc(
   curvlab = c("Convênio/Particular",
               "SUS"),
   main = "Morte por outras causas")
-text(2350, 0.7, "Caráter de atendimento", font = 2, cex=1.4)
+text(2150, 0.7, "Caráter de atendimento", font = 2, cex=1.4)
+
+dev.off()
 
 # Gráfico FIA RADIO 
+png("fia_graf_cov_2.png",
+    width = 3800,
+    height = 4150,
+    res = 300)
+layout(matrix(c(1, 2, 3, 4, 5, 6), nrow = 3, byrow = TRUE))
+
+par(mar = c(5, 3, 4, 1),
+    oma = c(0, 0.1, 0, 0),
+    mgp = c(1.9, 0.5, 0))
+
 fia_radio <- cuminc(
   ftime   = dados_org$time,
   fstatus = dados_org$status,
@@ -224,7 +231,7 @@ plot.cuminc(
   curvlab = c("Sem radioterapia",
               "Com radioterapia"),
   main = "Morte por câncer")
-text(1450, 0.85, "Radioterapia", font = 2, cex=1.4)
+text(1000, 0.85, "Radioterapia", font = 2, cex=1.4)
 #Causa 2
 plot.cuminc(
   fia_radio[c(3,4)],
@@ -241,7 +248,7 @@ plot.cuminc(
   curvlab = c("Sem radioterapia",
               "Com radioterapia"),
   main = "Morte por outras causas")
-text(1450, 0.85, "Radioterapia", font = 2, cex=1.4)
+text(1000, 0.85, "Radioterapia", font = 2, cex=1.4)
 
 
 # Gráfico FIA QUIMIO
@@ -268,7 +275,7 @@ plot.cuminc(
   curvlab = c("Sem quimioterapia",
               "Com quimioterapia"),
   main = "Morte por câncer")
-text(1550, 0.75, "Quimioterapia", font = 2, cex=1.4)
+text(1100, 0.75, "Quimioterapia", font = 2, cex=1.4)
 #Causa 2
 plot.cuminc(
   fia_quimio[c(3,4)],
@@ -285,7 +292,7 @@ plot.cuminc(
   curvlab = c("Sem quimioterapia",
               "Com quimioterapia"),
   main = "Morte por outras causas")
-text(1550, 0.75, "Quimioterapia", font = 2, cex=1.4)
+text(1100, 0.75, "Quimioterapia", font = 2, cex=1.4)
 
 # Gráfico FIA CIRURGIA  
 fia_cirurgia <- cuminc(
@@ -311,7 +318,7 @@ plot.cuminc(
   curvlab = c("Sem cirurgia",
               "Com cirurgia"),
   main = "Morte por câncer")
-text(1070, 0.85, "Cirurgia", font = 2, cex=1.4)
+text(690, 0.85, "Cirurgia", font = 2, cex=1.4)
 
 #Causa 2
 plot.cuminc(
@@ -329,9 +336,21 @@ plot.cuminc(
   curvlab = c("Sem cirurgia",
               "Com cirurgia"),
   main = "Morte por outras causas")
-text(1070, 0.85, "Cirurgia", font = 2, cex=1.4)
+text(690, 0.85, "Cirurgia", font = 2, cex=1.4)
 
-# Gráfico FIA RECIDIVA  
+dev.off()
+
+# Gráfico FIA RECIDIVA 
+png("fia_graf_cov_3.png",
+    width = 3800,
+    height = 4150,
+    res = 300)
+layout(matrix(c(1, 2, 3, 4, 5, 6), nrow = 3, byrow = TRUE))
+
+par(mar = c(5, 3, 4, 1),
+    oma = c(0, 0.1, 0, 0),
+    mgp = c(1.9, 0.5, 0))
+
 fia_recidiva <- cuminc(
   ftime   = dados_org$time,
   fstatus = dados_org$status,
@@ -355,7 +374,7 @@ plot.cuminc(
   curvlab = c("Com recidiva",
               "Sem recidiva"),
   main = "Morte por câncer")
-text(2150, 0.9, "Recidiva do câncer", font = 2, cex=1.4)
+text(1500, 0.9, "Recidiva do câncer", font = 2, cex=1.4)
 #Causa 2
 plot.cuminc(
   fia_recidiva[c(3,4)],
@@ -372,7 +391,7 @@ plot.cuminc(
   curvlab = c("Com recidiva",
               "Sem recidiva"),
   main = "Morte por outras causas")
-text(2150, 0.9, "Recidiva do câncer", font = 2, cex=1.4)
+text(1500, 0.9, "Recidiva do câncer", font = 2, cex=1.4)
 
 # Gráfico FIA ECGRUP
 fia_ec <- cuminc(
@@ -399,7 +418,7 @@ plot.cuminc(
               "II/III",
               "IV"),
   main = "Morte por câncer")
-text(1850, 1, "Estágio tumoral", font = 2, cex=1.4)
+text(1200, 1, "Estágio tumoral", font = 2, cex=1.4)
 #Causa 2
 plot.cuminc(
   fia_ec[c(4:6)],
@@ -417,7 +436,7 @@ plot.cuminc(
               "II/III",
               "IV"),
   main = "Morte por outras causas")
-text(1850, 1, "Estágio tumoral", font = 2, cex=1.4)
+text(1200, 1, "Estágio tumoral", font = 2, cex=1.4)
 
 # Gráfico FIA M 
 fia_m <- cuminc(
@@ -443,7 +462,7 @@ plot.cuminc(
   curvlab = c("Presença de metástase",
               "Ausência de metástase"),
   main = "Morte por câncer")
-text(1320, 0.95, "Metástase", font = 2, cex=1.4)
+text(800, 0.95, "Metástase", font = 2, cex=1.4)
 #Causa 2
 plot.cuminc(
   fia_m[c(3:4)],
@@ -460,21 +479,20 @@ plot.cuminc(
   curvlab = c("Presença de metástase",
               "Ausência de metástase"),
   main = "Morte por outras causas")
-text(1320, 0.95, "Metástase", font = 2, cex=1.4)
+text(800, 0.95, "Metástase", font = 2, cex=1.4)
 
 dev.off()
 
 # Descritiva Categórica ----
 vars_cat <- c("catend_cat", "ecgrup_cat", "m_cat", "radio_cat",
-              "quimio_cat", "cirurgia_cat", "sexo_cat", "rec_cat",
-              "status_cat")
+              "quimio_cat", "cirurgia_cat", "sexo_cat", "rec_cat")
 
 nomes_cat <- c("Caráter de atendimento", "Estágio tumoral", "Metástase",
                "Radioterapia", "Quimioterapia", "Cirurgia", "Sexo",
-               "Recidiva do câncer", "Status")
+               "Recidiva do câncer")
 
 # FUNÇÃO PARA OS GRÁFICOS CATEGÓRICOS
-grafico_cat <- function(dados, variavel, nome_grafico) {
+grafico_cat <- function(dados, variavel, nome_grafico, limite_y) {
   dados %>%
     select(all_of(variavel)) %>%
     filter(!is.na(.data[[variavel]])) %>%
@@ -488,7 +506,7 @@ grafico_cat <- function(dados, variavel, nome_grafico) {
              color = "grey25", linewidth = 0.4) +
     #Frequência absoluta e percentual
     geom_text(aes(label = paste0(n," (",round(percentual, 1),"%)")),
-              hjust = 1, color = "black",size = 3.4, fontface = "plain") +
+              hjust = -0.1, color = "black",size = 4, fontface = "plain") +
     coord_flip() +
     labs(title = nome_grafico, x = NULL, y = "Frequência") +
     theme_classic() +
@@ -499,13 +517,13 @@ grafico_cat <- function(dados, variavel, nome_grafico) {
         hjust = 0.5,
         color = "black"),
       axis.title = element_text(
-        size = 10,
+        size = 11,
         color = "black"),
       axis.text.y = element_text(
-        size = 9,
+        size = 10,
         color = "black"),
       axis.text.x = element_text(
-        size = 8.5,
+        size = 10,
         color = "black"),
       axis.line = element_line(
         linewidth = 0.5,
@@ -515,25 +533,29 @@ grafico_cat <- function(dados, variavel, nome_grafico) {
         color = "black"),
       panel.grid = element_blank(),
       plot.margin = margin(8, 8, 8, 8)) +
-    scale_y_continuous(expand = expansion(mult = c(0, 0.03)))
+    scale_y_continuous(limits = c(0, limite_y),
+                       expand = expansion(mult = c(0, 0.03)))
 }
 
+limites_y <- c(3400, 1300, 2900, 3100, 2600, 2800, 2100, 2900)
 graficos_cat <- Map(
-  function(var, nome) {
+  function(var, nome, limite) {
     grafico_cat(
       dados = dados_org,
       variavel = var,
-      nome_grafico = nome) },
+      nome_grafico = nome,
+      limite_y = limite) },
   vars_cat,
-  nomes_cat)
+  nomes_cat,
+  limites_y)
 
 names(graficos_cat) <- nomes_cat
 
-fig_cat <- wrap_plots(graficos_cat, ncol = 3)
+fig_cat <- wrap_plots(graficos_cat, ncol = 2)
 fig_cat
 
-ggsave("descritiva_categoricas.png",
-       fig_cat, width = 22, height = 12, 
+ggsave("descritiva_categoricas.pdf",
+       fig_cat, width = 10, height = 10, 
        units = "in", dpi = 300, bg = "white")
 
 # TABELA DESCRITIVA DAS CATEGÓRICAS
@@ -572,7 +594,7 @@ grafico_hist <- ggplot(dados_quant, aes(x = Valor)) +
   geom_histogram(
     bins = 20,
     fill = "grey70",
-    color = "black",
+    color = "grey25",
     linewidth = 0.5) +
   facet_wrap(
     ~ Variavel,
@@ -606,7 +628,7 @@ grafico_box <- ggplot(dados_quant, aes(x = "", y = Valor)) +
   geom_boxplot(
     width = 0.35,
     fill = "grey70",
-    color = "black",
+    color = "grey25",
     linewidth = 0.7,
     outlier.shape = 21,
     outlier.size = 2,
@@ -638,15 +660,15 @@ grafico_box
 
 # FIGURA FINAL
 grafico_quant_completo <-
-  grafico_hist +
-  grafico_box 
+  grafico_box /
+  grafico_hist 
 
 grafico_quant_completo
 
 ggsave(
-  "Figura_descritiva_quantitativas.png",
+  "descritiva_quantitativas.pdf",
   grafico_quant_completo,
-  width = 20,
+  width = 10,
   height = 6,
   units = "in",
   dpi = 300,
@@ -729,8 +751,10 @@ grafico_ano_status <- dados_org %>%
     color = "Status") +
   theme_classic() +
   theme(
-    axis.title = element_text(size = 11),
-    axis.text = element_text(size = 9),
+    axis.title = element_text(size = 11,
+                              color = "black"),
+    axis.text = element_text(size = 9,
+                             color = "black"),
     legend.position = c(0.2, 0.90),
     legend.title = element_text(size = 10),
     legend.text = element_text(size = 9),
@@ -753,14 +777,30 @@ grafico_ano_status <- dados_org %>%
 
 grafico_ano_status
 
+grafico_ano_completo <-
+  grafico_ano +  grafico_ano_status 
 
+grafico_ano_completo
+
+ggsave(
+  "descritiva_ano.pdf",
+  grafico_ano_completo,
+  width = 13,
+  height = 4.5,
+  units = "in",
+  dpi = 300,
+  bg = "white"
+)
+
+
+# Descritiva Status ----
 grafico_tempo_status <- dados_org %>%
   filter(!is.na(time), !is.na(status_cat)) %>%
   ggplot(aes(x = status_cat, y = time)) +
   geom_boxplot(
     width = 0.5,
     fill = "grey70",
-    color = "black",
+    color = "grey25",
     linewidth = 0.7,
     outlier.shape = 21,
     outlier.size = 2) +
@@ -769,24 +809,80 @@ grafico_tempo_status <- dados_org %>%
     y = "Tempo de acompanhamento") +
   theme_classic() +
   theme(
-    axis.title = element_text(size = 11),
-    axis.text = element_text(size = 9),
+    axis.title = element_text(size = 15,
+                              color = "black"),
+    axis.text = element_text(size = 11,
+                             color = "black"),
     panel.grid = element_blank())
 
 grafico_tempo_status
 
-grafico_ano_completo <-
-  grafico_ano +  grafico_ano_status + grafico_tempo_status
+grafico_cat_s <- function(dados, variavel, nome_grafico, limite_y) {
+  dados %>%
+    select(all_of(variavel)) %>%
+    filter(!is.na(.data[[variavel]])) %>%
+    count(.data[[variavel]], name = "n") %>%
+    mutate(
+      percentual = n / sum(n) * 100,
+      categoria = as.character(.data[[variavel]])) %>%
+    #Barras
+    ggplot(aes(x = reorder(categoria, n), y = n)) +
+    geom_col(width = 0.65, fill = "grey70",
+             color = "grey25", linewidth = 0.4) +
+    #Frequência absoluta e percentual
+    geom_text(aes(label = paste0(n," (",round(percentual, 1),"%)")),
+              hjust = -0.1, color = "black",size = 4, fontface = "plain") +
+    coord_flip() +
+    labs(title = nome_grafico, x = NULL, y = "Frequência") +
+    theme_classic() +
+    theme(
+      plot.title = element_text(
+        face = "bold",
+        size = 12,
+        hjust = 0.5,
+        color = "black"),
+      axis.title = element_text(
+        size = 15,
+        color = "black"),
+      axis.text.y = element_text(
+        size = 11,
+        color = "black"),
+      axis.text.x = element_text(
+        size = 11,
+        color = "black"),
+      axis.line = element_line(
+        linewidth = 0.5,
+        color = "black"),
+      axis.ticks = element_line(
+        linewidth = 0.4,
+        color = "black"),
+      panel.grid = element_blank(),
+      plot.margin = margin(8, 8, 8, 8)) +
+    scale_y_continuous(limits = c(0, limite_y),
+                       expand = expansion(mult = c(0, 0.03)))
+}
+grafico_status <- Map(
+  function(var, nome, limite) {
+    grafico_cat_s(
+      dados = dados_org,
+      variavel = var,
+      nome_grafico = nome,
+      limite_y = limite) },
+  "status_cat",
+  "",
+  1600)
 
-grafico_ano_completo
+grafico_status_completo <-
+  grafico_tempo_status +  grafico_status 
+
+grafico_status_completo
 
 ggsave(
-  "descritiva_ano.png",
-  grafico_ano_completo,
-  width = 20,
-  height = 6,
+  "descritiva_status.pdf",
+  grafico_status_completo,
+  width = 13,
+  height = 4.5,
   units = "in",
   dpi = 300,
   bg = "white"
 )
-
