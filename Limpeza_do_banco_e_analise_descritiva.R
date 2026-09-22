@@ -18,7 +18,7 @@ dados_org<- dados %>% mutate(time = as.numeric(DTULTINFO - dados$DTDIAG),
   filter(TOPOGRUP %in% c("C40","C41")) %>% 
   select(time, status, 
          IDADE, SEXO, TOPO, TOPOGRUP, CATEATEND, RADIO, QUIMIO, CIRURGIA,
-         NENHUM, RECNENHUM, PERDASEG, ECGRUP, M, ano) %>% 
+         RECNENHUM, PERDASEG, ECGRUP, M, ano) %>% 
   filter(ECGRUP %in% c("I","II","III","IV"),
          M %in% c("0", "1", "1A", "1B"))   %>% 
   mutate(sexo_cat = case_when(SEXO == 1 ~ "Masculino",
@@ -73,9 +73,44 @@ write.csv(dados_org, "dados_ossos.csv", row.names = FALSE)
 
 # Banco em CSV --------
 dados_org <- read_csv("dados_ossos.csv")
+# Critérios de exclusão -----
+dados_ex<- dados %>% mutate(time = as.numeric(DTULTINFO - dados$DTDIAG),
+                               status = case_when(ULTINFO %in% c(1,2) ~ 0,
+                                                  ULTINFO == 3 ~ 1,
+                                                  ULTINFO == 4 ~ 2)) %>% 
+  filter(time >= 0) %>% 
+  mutate(time = time+1) %>% 
+  filter(TOPOGRUP %in% c("C40","C41")) %>% 
+  select(time, status, 
+         IDADE, SEXO, TOPOGRUP, CATEATEND, RADIO, QUIMIO, CIRURGIA,
+         RECNENHUM, PERDASEG, ECGRUP, M, ano)
+
+for (v in names(dados_ex)) {
+  x <- dados_ex[[v]]
+  if (is.character(x) ||
+      is.factor(x) ||
+      is.logical(x) ||
+      length(unique(x[!is.na(x)])) <= 20) {
+    
+    cat("\n--------------------------------------------\n")
+    cat("VARIÁVEL:", v, "\n")
+    
+    print(
+      sort(
+        table(x, useNA = "ifany"),
+        decreasing = TRUE
+      )
+    )
+  }
+}
+
 # Gráfico FIA GERAL ------
 setwd("~/Estudos/Doutorado/Matérias/Sobrevivência/Projeto Vertical Promotion/Gráficos")
 cores <- c("black", "#d00000","#0349A5", "green" ,"orange","brown","yellow","purple")
+
+par(mar = c(4.5, 3.5, 1.5, 1),
+    oma = c(0, 0.1, 0, 0),
+    mgp = c(1.9, 0.5, 0))
 
 fia <- cuminc(
   ftime   = dados_org$time,
@@ -95,17 +130,14 @@ plot.cuminc(
   xlab = "Tempo (dias)",
   ylab = "FIA",
   curvlab = c("Morte por câncer",
-              "Morte por outras causas"),
-  main="Câncer de ossos: CIDs C40 e C41"
-)
-
+              "Morte por outras causas"))
+#8 5
 
 # Gráfico FIA Variáveis Explicativas----
 # Gráfico FIA Sexo
-png("fia_graf_cov_1.png",
-    width = 3800,
-    height = 3000,
-    res = 300)
+pdf("fia_graf_cov_1.pdf",
+    width = 3800/300,
+    height = 3000/300)
 layout(matrix(c(1, 2, 3, 4), nrow = 2, byrow = TRUE))
 
 par(mar = c(5, 3, 4, 1),
@@ -198,10 +230,9 @@ text(2150, 0.7, "Caráter de atendimento", font = 2, cex=1.4)
 dev.off()
 
 # Gráfico FIA RADIO 
-png("fia_graf_cov_2.png",
-    width = 3800,
-    height = 4150,
-    res = 300)
+pdf("fia_graf_cov_2.pdf",
+    width = 3800/300,
+    height = 4150/300)
 layout(matrix(c(1, 2, 3, 4, 5, 6), nrow = 3, byrow = TRUE))
 
 par(mar = c(5, 3, 4, 1),
@@ -211,7 +242,7 @@ par(mar = c(5, 3, 4, 1),
 fia_radio <- cuminc(
   ftime   = dados_org$time,
   fstatus = dados_org$status,
-  group   = dados_org$RADIO,
+  group   = dados_org$radio_cat,
   cencode = 0)
 
 #Causa 1
@@ -228,8 +259,8 @@ plot.cuminc(
   col = cores, 
   xlab = "Tempo (dias)",
   ylab = "FIA",
-  curvlab = c("Sem radioterapia",
-              "Com radioterapia"),
+  curvlab = c("Com radioterapia",
+              "Sem radioterapia"),
   main = "Morte por câncer")
 text(1000, 0.85, "Radioterapia", font = 2, cex=1.4)
 #Causa 2
@@ -245,8 +276,8 @@ plot.cuminc(
   col = cores, 
   xlab = "Tempo (dias)",
   ylab = "FIA",
-  curvlab = c("Sem radioterapia",
-              "Com radioterapia"),
+  curvlab = c("Com radioterapia",
+              "Sem radioterapia"),
   main = "Morte por outras causas")
 text(1000, 0.85, "Radioterapia", font = 2, cex=1.4)
 
@@ -255,7 +286,7 @@ text(1000, 0.85, "Radioterapia", font = 2, cex=1.4)
 fia_quimio <- cuminc(
   ftime   = dados_org$time,
   fstatus = dados_org$status,
-  group   = dados_org$QUIMIO,
+  group   = dados_org$quimio_cat,
   cencode = 0)
 
 #Causa 1
@@ -272,8 +303,8 @@ plot.cuminc(
   col = cores, 
   xlab = "Tempo (dias)",
   ylab = "FIA",
-  curvlab = c("Sem quimioterapia",
-              "Com quimioterapia"),
+  curvlab = c("Com quimioterapia",
+              "Sem quimioterapia"),
   main = "Morte por câncer")
 text(1100, 0.75, "Quimioterapia", font = 2, cex=1.4)
 #Causa 2
@@ -289,8 +320,8 @@ plot.cuminc(
   col = cores, 
   xlab = "Tempo (dias)",
   ylab = "FIA",
-  curvlab = c("Sem quimioterapia",
-              "Com quimioterapia"),
+  curvlab = c("Com quimioterapia",
+              "Sem quimioterapia"),
   main = "Morte por outras causas")
 text(1100, 0.75, "Quimioterapia", font = 2, cex=1.4)
 
@@ -298,7 +329,7 @@ text(1100, 0.75, "Quimioterapia", font = 2, cex=1.4)
 fia_cirurgia <- cuminc(
   ftime   = dados_org$time,
   fstatus = dados_org$status,
-  group   = dados_org$CIRURGIA,
+  group   = dados_org$cirurgia_cat,
   cencode = 0)
 
 #Causa 1
@@ -315,8 +346,8 @@ plot.cuminc(
   col = cores, 
   xlab = "Tempo (dias)",
   ylab = "FIA",
-  curvlab = c("Sem cirurgia",
-              "Com cirurgia"),
+  curvlab = c("Com cirurgia",
+              "Sem cirurgia"),
   main = "Morte por câncer")
 text(690, 0.85, "Cirurgia", font = 2, cex=1.4)
 
@@ -333,18 +364,17 @@ plot.cuminc(
   col = cores, 
   xlab = "Tempo (dias)",
   ylab = "FIA",
-  curvlab = c("Sem cirurgia",
-              "Com cirurgia"),
+  curvlab = c("Com cirurgia",
+              "Sem cirurgia"),
   main = "Morte por outras causas")
 text(690, 0.85, "Cirurgia", font = 2, cex=1.4)
 
 dev.off()
 
 # Gráfico FIA RECIDIVA 
-png("fia_graf_cov_3.png",
-    width = 3800,
-    height = 4150,
-    res = 300)
+pdf("fia_graf_cov_3.pdf",
+    width = 3800/300,
+    height = 4150/300)
 layout(matrix(c(1, 2, 3, 4, 5, 6), nrow = 3, byrow = TRUE))
 
 par(mar = c(5, 3, 4, 1),
@@ -354,7 +384,7 @@ par(mar = c(5, 3, 4, 1),
 fia_recidiva <- cuminc(
   ftime   = dados_org$time,
   fstatus = dados_org$status,
-  group   = dados_org$RECNENHUM,
+  group   = dados_org$rec_cat,
   cencode = 0)
 
 #Causa 1
@@ -459,8 +489,8 @@ plot.cuminc(
   col = cores, 
   xlab = "Tempo (dias)",
   ylab = "FIA",
-  curvlab = c("Presença de metástase",
-              "Ausência de metástase"),
+  curvlab = c("Ausência de metástase",
+              "Presença de metástase"),
   main = "Morte por câncer")
 text(800, 0.95, "Metástase", font = 2, cex=1.4)
 #Causa 2
@@ -476,8 +506,8 @@ plot.cuminc(
   col = cores, 
   xlab = "Tempo (dias)",
   ylab = "FIA",
-  curvlab = c("Presença de metástase",
-              "Ausência de metástase"),
+  curvlab = c("Ausência de metástase",
+              "Presença de metástase"),
   main = "Morte por outras causas")
 text(800, 0.95, "Metástase", font = 2, cex=1.4)
 
@@ -575,7 +605,7 @@ tabela_cat
 
 # Descritiva Quantitativa ----
 vars_quant <- c("IDADE", "time")
-nomes_quant <- c("Idade", "Tempo")
+nomes_quant <- c("Idade", "Tempo de acompanhamento")
 
 dados_quant <- dados_org %>%
   select(all_of(vars_quant)) %>%
@@ -583,27 +613,41 @@ dados_quant <- dados_org %>%
     cols = everything(),
     names_to = "Variavel",
     values_to = "Valor") %>%
-  mutate(
-    Variavel = factor(
-      Variavel,
-      levels = vars_quant,
-      labels = nomes_quant))
+  mutate(Variavel = factor(Variavel,
+                           levels = vars_quant,
+                           labels = nomes_quant))
 
-# FUNÇÃO PARA OS GRÁFICOS QUANTITATIVOS - Histograma
+estatisticas <- dados_quant %>%
+  group_by(Variavel) %>%
+  summarise(media = mean(Valor, na.rm = TRUE),
+            mediana = median(Valor, na.rm = TRUE),
+            .groups = "drop")
+
+#Histograma
 grafico_hist <- ggplot(dados_quant, aes(x = Valor)) +
+  #Histograma
   geom_histogram(
     bins = 20,
-    fill = "grey70",
+    fill = "grey75",
     color = "grey25",
-    linewidth = 0.5) +
-  facet_wrap(
-    ~ Variavel,
-    scales = "free",
-    ncol = 3) +
-  labs(
-    x = NULL,
-    y = "Frequência") +
-  theme_classic() +
+    linewidth = 0.45,
+    alpha = 0.9) +
+  # Linhas de média e mediana
+  geom_vline(
+    data = estatisticas,
+    aes(xintercept = media, linetype = "Média"),
+    color = "#2471A3",linewidth = 0.8) +
+  geom_vline(
+    data = estatisticas,
+    aes(xintercept = mediana, linetype = "Mediana"),
+    color = "#C0392B",linewidth = 0.8) +
+  facet_wrap(~Variavel, scales = "free", ncol = 2) +
+  labs(x = NULL, y = "Densidade", linetype = NULL) +
+  scale_linetype_manual(
+    values = c(
+      "Média" = "solid",
+      "Mediana" = "dashed")) +
+  theme_classic(base_size = 11) +
   theme(
     strip.background = element_blank(),
     strip.text = element_text(
@@ -614,54 +658,71 @@ grafico_hist <- ggplot(dados_quant, aes(x = Valor)) +
       size = 11,
       color = "black"),
     axis.text = element_text(
-      size = 9,
+      size = 11,
       color = "black"),
     axis.line = element_line(
-      linewidth = 0.5),
+      linewidth = 0.5,
+      color = "black"),
     panel.grid = element_blank(),
-    plot.margin = margin(8, 8, 8, 8))
-
+    # Legenda
+    legend.position = "top",
+    legend.direction = "horizontal",
+    legend.text = element_text(
+      size = 12),
+    legend.key.width = unit(
+      1.2, "cm"),
+    legend.background = element_blank(),
+    legend.box.background = element_blank(),
+    plot.margin = margin(8, 8, 5, 8))
 grafico_hist
 
-# FUNÇÃO PARA OS GRÁFICOS QUANTITATIVOS - Boxplot
+#Boxplot
 grafico_box <- ggplot(dados_quant, aes(x = "", y = Valor)) +
   geom_boxplot(
     width = 0.35,
-    fill = "grey70",
-    color = "grey25",
-    linewidth = 0.7,
-    outlier.shape = 21,
-    outlier.size = 2,
-    outlier.fill = "white",
-    outlier.color = "black") +
+    fill = "grey85",
+    color = "#2C3E50",
+    linewidth = 0.8,
+    outlier.shape = NA) +
+  # Mediana
+  stat_summary(
+    fun = median,
+    geom = "point",
+    shape = 21,
+    size = 2.5,
+    fill = "#C0392B",
+    color = "white",
+    stroke = 0.6) +
+  stat_summary(
+    fun = mean,
+    geom = "point",
+    shape = 23,
+    size = 2.5,
+    fill = "#2471A3",
+    color = "white",
+    stroke = 0.6) +
   facet_wrap(
-    ~ Variavel,
+    ~Variavel,
     scales = "free",
-    ncol = 3) +
-  labs(
-    x = NULL,
-    y = "Valor") +
-  theme_classic() +
-  theme(
-    strip.background = element_blank(),
-    strip.text = element_text(
-      face = "bold",
-      size = 12),
-    axis.title = element_text(
-      size = 11),
-    axis.text = element_text(
-      size = 9,
-      color = "black"),
-    axis.text.x = element_blank(),
-    axis.ticks.x = element_blank(),
-    panel.grid = element_blank())
+    ncol = 2) +
+  labs(x = NULL, y = "Valor") +
+  theme_classic(base_size = 11) +
+  theme(strip.background = element_blank(),
+        strip.text = element_text(face = "bold", 
+                                  size = 12,
+                                  color = "black"),
+        axis.title = element_text(size = 11, color = "black"),
+        axis.text = element_text(size = 11, color = "black"),
+        axis.text.x = element_blank(),
+        axis.ticks.x = element_blank(),
+        axis.line = element_line(linewidth = 0.5, color = "black"),
+        panel.grid = element_blank(),
+        plot.margin = margin(5, 8, 8, 8))
 
-grafico_box
-
-# FIGURA FINAL
 grafico_quant_completo <-
   grafico_box /
-  grafico_hist 
+  grafico_hist +
+  plot_layout(heights = c(0.85, 1.2))
 
 grafico_quant_completo
 
@@ -715,15 +776,15 @@ grafico_ano <- dados_org %>%
   geom_text(
     aes(label = n),
     vjust = -0.7,
-    size = 3.2) +
+    size = 4) +
   labs(x = "Ano", y = "Número de pacientes") +
   theme_classic() +
   theme(
     axis.title = element_text(
-      size = 11,
+      size = 15,
       color = "black"),
     axis.text = element_text(
-      size = 9,
+      size = 12,
       color = "black"),
     axis.line = element_line(
       linewidth = 0.5,
@@ -748,19 +809,18 @@ grafico_ano_status <- dados_org %>%
   labs(
     x = "Ano",
     y = "Número de pacientes",
-    color = "Status") +
+    color = NULL) +
   theme_classic() +
   theme(
-    axis.title = element_text(size = 11,
+    axis.title = element_text(size = 15,
                               color = "black"),
-    axis.text = element_text(size = 9,
+    axis.text = element_text(size = 12,
                              color = "black"),
-    legend.position = c(0.2, 0.90),
-    legend.title = element_text(size = 10),
-    legend.text = element_text(size = 9),
+    legend.position = c(0.22, 0.90),
+    legend.title = element_text(size = 12),
+    legend.text = element_text(size = 12),
     legend.background = element_rect(
       fill = "white",
-      color = "grey70",
       linewidth = 0.3),
     legend.key.width = unit(1.2, "cm"),
     panel.grid = element_blank()) +
@@ -797,25 +857,43 @@ ggsave(
 grafico_tempo_status <- dados_org %>%
   filter(!is.na(time), !is.na(status_cat)) %>%
   ggplot(aes(x = status_cat, y = time)) +
+  # Boxplot
   geom_boxplot(
-    width = 0.5,
-    fill = "grey70",
-    color = "grey25",
-    linewidth = 0.7,
-    outlier.shape = 21,
-    outlier.size = 2) +
-  labs(
-    x = "Status",
-    y = "Tempo de acompanhamento") +
-  theme_classic() +
-  theme(
-    axis.title = element_text(size = 15,
-                              color = "black"),
-    axis.text = element_text(size = 11,
-                             color = "black"),
-    panel.grid = element_blank())
+    width = 0.35,
+    fill = "grey85",
+    color = "#2C3E50",
+    linewidth = 0.8,
+    outlier.shape = NA) +
+  # Mediana
+  stat_summary(
+    fun = median,
+    geom = "point",
+    shape = 21,
+    size = 2.5,
+    fill = "#C0392B",
+    color = "white",
+    stroke = 0.6) +
+  # Média
+  stat_summary(
+    fun = mean,
+    geom = "point",
+    shape = 23,
+    size = 2.5,
+    fill = "#2471A3",
+    color = "white",
+    stroke = 0.6) +
+  labs(x = "Status", y = "Tempo de acompanhamento") +
+  theme_classic(base_size = 11) +
+  theme(axis.title = element_text(size = 15, color = "black"),
+        axis.text = element_text(size = 12, color = "black"),
+        axis.line = element_line(linewidth = 0.5, color = "black"),
+        axis.ticks = element_line(linewidth = 0.4, color = "black"),
+        panel.grid = element_blank(),
+        plot.margin = margin(5, 8, 8, 8))
 
 grafico_tempo_status
+
+
 
 grafico_cat_s <- function(dados, variavel, nome_grafico, limite_y) {
   dados %>%
@@ -831,9 +909,8 @@ grafico_cat_s <- function(dados, variavel, nome_grafico, limite_y) {
              color = "grey25", linewidth = 0.4) +
     #Frequência absoluta e percentual
     geom_text(aes(label = paste0(n," (",round(percentual, 1),"%)")),
-              hjust = -0.1, color = "black",size = 4, fontface = "plain") +
-    coord_flip() +
-    labs(title = nome_grafico, x = NULL, y = "Frequência") +
+              hjust = 0.5, vjust = -0.5, color = "black",size = 4.5, fontface = "plain") +
+    labs(title = nome_grafico, x = "Status", y = "Frequência") +
     theme_classic() +
     theme(
       plot.title = element_text(
@@ -845,10 +922,10 @@ grafico_cat_s <- function(dados, variavel, nome_grafico, limite_y) {
         size = 15,
         color = "black"),
       axis.text.y = element_text(
-        size = 11,
+        size = 12,
         color = "black"),
       axis.text.x = element_text(
-        size = 11,
+        size = 12,
         color = "black"),
       axis.line = element_line(
         linewidth = 0.5,
@@ -858,7 +935,7 @@ grafico_cat_s <- function(dados, variavel, nome_grafico, limite_y) {
         color = "black"),
       panel.grid = element_blank(),
       plot.margin = margin(8, 8, 8, 8)) +
-    scale_y_continuous(limits = c(0, limite_y),
+    scale_y_continuous(limits = c(0, 1350),
                        expand = expansion(mult = c(0, 0.03)))
 }
 grafico_status <- Map(
@@ -873,7 +950,7 @@ grafico_status <- Map(
   1600)
 
 grafico_status_completo <-
-  grafico_tempo_status +  grafico_status 
+  grafico_status[[1]] +  grafico_tempo_status 
 
 grafico_status_completo
 
@@ -886,3 +963,84 @@ ggsave(
   dpi = 300,
   bg = "white"
 )
+
+# Comparação de grupos ----
+# Sexo
+cuminc(ftime = dados_org$time,
+       fstatus = dados_org$status,
+       group = dados_org$sexo_cat,
+       cencode = 0)
+
+# Catend
+cuminc(ftime = dados_org$time,
+       fstatus = dados_org$status,
+       group = dados_org$catend_cat,
+       cencode = 0)
+
+# Radio
+cuminc(ftime = dados_org$time,
+       fstatus = dados_org$status,
+       group = dados_org$radio_cat,
+       cencode = 0)
+
+#Quimio
+cuminc(ftime = dados_org$time,
+       fstatus = dados_org$status,
+       group = dados_org$quimio_cat,
+       cencode = 0)
+
+#Cirurgia
+cuminc(ftime = dados_org$time,
+       fstatus = dados_org$status,
+       group = dados_org$cirurgia_cat,
+       cencode = 0)
+
+#Recnenhum
+cuminc(ftime = dados_org$time,
+       fstatus = dados_org$status,
+       group = dados_org$rec_cat,
+       cencode = 0)
+
+#M
+cuminc(ftime = dados_org$time,
+       fstatus = dados_org$status,
+       group = dados_org$m_cat,
+       cencode = 0)
+
+#ECGroup
+cuminc(ftime = dados_org$time,
+       fstatus = dados_org$status,
+       group = dados_org$ecgrup_cat,
+       cencode = 0)
+
+gray_pairwise <- function(dados, grupo1, grupo2) {
+  dados_pair <- dados[dados$ecgrup_cat %in% c(grupo1, grupo2), ]
+  dados_pair$ecgrup_cat <- factor(
+    dados_pair$ecgrup_cat,
+    levels = c(grupo1, grupo2))
+  resultado <- cuminc(
+    ftime = dados_pair$time,
+    fstatus = dados_pair$status,
+    group = dados_pair$ecgrup_cat,
+    cencode = 0)
+  data.frame(
+    Comparacao = paste(grupo1, "×", grupo2),
+    p_causa1 = resultado$Tests[1, "pv"],
+    p_causa2 = resultado$Tests[2, "pv"])
+}
+
+# Comparações
+resultado_pairwise <- rbind(
+  gray_pairwise(dados_org, "I", "II/III"),
+  gray_pairwise(dados_org, "I", "IV"),
+  gray_pairwise(dados_org, "II/III", "IV"))
+
+resultado_pairwise$p_causa1_holm <- p.adjust(
+  resultado_pairwise$p_causa1,
+  method = "holm")
+
+resultado_pairwise$p_causa2_holm <- p.adjust(
+  resultado_pairwise$p_causa2,
+  method = "holm")
+
+resultado_pairwise
