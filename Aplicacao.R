@@ -17,13 +17,15 @@
 # numerical differentiation is performed with base R.
 # =============================================================================
 
-required <- c("boot", "survival", "dplyr", "xtable")
+required <- c("boot", "survival", "dplyr", "xtable", "tidyverse")
 missing_packages <- required[!vapply(required, requireNamespace,
                                      quietly = TRUE, FUN.VALUE = logical(1))]
 if (length(missing_packages)) {
   stop("Install the following packages first: ",
        paste(missing_packages, collapse = ", "))
 }
+
+pacman::p_load("boot", "survival", "dplyr", "xtable", "tidyverse")
 
 # ---------- Utilities for a piecewise-exponential activation distribution ----
 
@@ -535,7 +537,61 @@ mel <- dados_org %>% select(time, status, sexo_reg, IDADE, ano, catend_reg,
 
 # Four intervals (in years) determined by quartiles of observed failure times. If an
 # interval is sparse, use K=3 or manually specify clinically meaningful cuts.
-fit_melanoma <- fit_vertical_pt_em(mel, K = 4, trace = TRUE, compute_se = FALSE)
+# Ajuste dos modelos com K = 1,...,6
+modelos <- lapply(1:10, function(k) {
+  cat("\n-----------------------------------\n")
+  cat("Iniciando modelo com K =", k, "\n")
+  cat("Horário de início:", format(Sys.time(), "%H:%M:%S"), "\n")
+  inicio <- Sys.time()
+  
+  fit <- fit_vertical_pt_em(mel, K = k, trace = FALSE, compute_se = FALSE)
+  tempo <- as.numeric(difftime(Sys.time(), inicio, units = "secs"))
+  
+  cat("Modelo K =", k, "finalizado!\n")
+  cat("Convergiu:", fit$converged, "\n")
+  cat("Iterações do EM:", fit$iterations, "\n")
+  cat("Tempo gasto:", round(tempo, 2), "segundos\n")
+  cat("-----------------------------------\n")
+  
+  fit$tempo <- tempo
+  
+  return(fit)
+})
+
+names(modelos) <- paste0("K=", 1:10)
+
+# Comparação dos modelos
+comparacao <- do.call(rbind, lapply(1:10, function(k) {
+  fit <- modelos[[k]]
+  npar <- length(fit$gamma) + length(fit$lambda) + length(fit$beta)
+  n <- nrow(fit$data)
+  data.frame(K = k, logLik = fit$logLik,
+             AIC = -2 * fit$logLik + 2 * npar,
+             BIC = -2 * fit$logLik + log(n) * npar,
+             convergiu = fit$converged)
+}))
+
+print(comparacao)
+
+# Quantidade de eventos em cada intervalo
+lapply(modelos, function(fit) fit$d_interval)
+# Estimativas das hazards de ativação
+lapply(modelos, function(fit) round(fit$lambda, 4))
+# Pontos de corte, em anos
+lapply(modelos, function(fit) round(fit$cuts, 2))
+
+data.frame(K = 1:length(modelos),
+           Cura_media = sapply(modelos, function(fit) mean(fit$cure)),
+           Eventos_min = sapply(modelos, function(fit) min(fit$d_interval)),
+           Eventos_max = sapply(modelos, function(fit) max(fit$d_interval)))
+
+# Seleção do melhor modelo pelo BIC
+melhor_k <- comparacao$K[which.min(ifelse(comparacao$convergiu,
+                                          comparacao$BIC, Inf))]
+
+fit_melanoma <- modelos[[melhor_k]]
+
+cat("Melhor modelo pelo BIC: K =", melhor_k, "\n")
 print(fit_melanoma)
 
 # Profile used by Nicolaie et al. (2019): male, ulceration present and mean
