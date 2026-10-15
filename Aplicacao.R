@@ -593,6 +593,7 @@ fit_melanoma <- modelos[[melhor_k]]
 
 cat("Melhor modelo pelo BIC: K =", melhor_k, "\n")
 print(fit_melanoma)
+summary(fit_melanoma)
 
 # Profile used by Nicolaie et al. (2019): male, ulceration present and mean
 # values of all continuous covariates (on their original scales).
