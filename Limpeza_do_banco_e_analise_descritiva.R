@@ -1,9 +1,10 @@
 pacman::p_load(foreign, tidyverse, survival, cmprsk, patchwork, scales)
+setwd("~/Estudos/Doutorado/Materias/Sobrevivência/Projeto Vertical Promotion")
 
 # Salvamento do banco em RDS ------
 dados <- lapply(2000:2022, function(ano) {
   cat("Lendo ano:", ano, "\n") 
-  read.dbf(paste0("RHC_GERAL", "/RHC_SP_", ano, ".dbf"), as.is = TRUE) %>% 
+  read.dbf(paste0("Banco de dados", "/RHC_SP_", ano, ".dbf"), as.is = TRUE) %>% 
     mutate(ano = ano)
 }) %>% 
   bind_rows()
@@ -1044,3 +1045,4 @@ resultado_pairwise$p_causa2_holm <- p.adjust(
   method = "holm")
 
 resultado_pairwise
+

@@ -1,0 +1,3 @@
+"modelo","assimetria_gravada","assimetria_reconstruida","divergencia_entre_matrizes","menor_autovalor"
+"Completo",4.03323208164608e-16,4.03323208164608e-16,0,4.76592526789709e-05
+"Sem m_reg na causa",3.79470760369927e-17,3.79470760369927e-17,0,4.76592526743352e-05

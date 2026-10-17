@@ -242,8 +242,13 @@ observed_information <- function(object, condition_limit = 1e10) {
   V_u <- if (positive_definite) solve(H) else matrix(NA_real_, length(par_hat), length(par_hat))
   
   # Delta transformation from log(lambda) to lambda.
-  J <- diag(length(par_hat)); J[p + seq_len(K), p + seq_len(K)] <- object$lambda
-  V <- J %*% V_u %*% J
+  J <- diag(length(par_hat))
+  idx_lambda <- p + seq_len(K)
+  J[cbind(idx_lambda, idx_lambda)] <- object$lambda
+  V <- J %*% V_u %*% t(J)
+  #J[p + seq_len(K), p + seq_len(K)] <- object$lambda
+  #V <- J %*% V_u %*% J
+  
   estimates <- c(object$gamma, object$lambda, object$beta)
   nm <- c(paste0("gamma:", colnames(object$X)),
           paste0("lambda[", seq_len(K), "]"),
@@ -527,142 +532,460 @@ print.vertical_pt_em <- function(x, ...) {
   invisible(x)
 }
 
-# ------------------------------- Data analysis -------------------------------
+# ============================== DATA ANALYSIS ================================
+setwd("~/Estudos/Doutorado/Materias/Sobrevivência/Projeto Vertical Promotion/result_reg")
 
-mel <- dados_org %>% select(time, status, sexo_reg, IDADE, ano, catend_reg,  
-                            ecgrup_2_3_reg, ecgrup_4_reg, m_reg, RADIO, QUIMIO, CIRURGIA) %>% 
-  mutate(status = case_when(status == 0 ~ 2,
-                            status == 1 ~ 1,
-                            status == 2 ~ 3))
+mel <- dados_org %>%
+  dplyr::select(time, status, sexo_reg, IDADE, ano, catend_reg,
+                ecgrup_2_3_reg, ecgrup_4_reg, m_reg,
+                RADIO, QUIMIO, CIRURGIA) %>%
+  dplyr::mutate(status = dplyr::case_when(
+    status == 0 ~ 2L, status == 1 ~ 1L, status == 2 ~ 3L,
+    TRUE ~ NA_integer_))
 
-# Four intervals (in years) determined by quartiles of observed failure times. If an
-# interval is sparse, use K=3 or manually specify clinically meaningful cuts.
-# Ajuste dos modelos com K = 1,...,6
-modelos <- lapply(1:10, function(k) {
-  cat("\n-----------------------------------\n")
-  cat("Iniciando modelo com K =", k, "\n")
-  cat("Horário de início:", format(Sys.time(), "%H:%M:%S"), "\n")
+# Numero de reamostragens.
+B_BOOT <- 500L
+
+tabela_regressao <- function(fit, boot) {
+  tab <- fit$se$coefficients
+  nm <- tab$parameter
+  if (!is.null(boot$parameter_table)) {  # resultado de bootstrap_full()
+    b <- boot$parameter_table[match(nm, boot$parameter_table$parameter), ]
+    ep_b <- b$bootstrap.se
+    li_b <- b$lower.95
+    ls_b <- b$upper.95
+  } else {                                # resultado de bootstrap_em()
+    ep_b <- unname(boot$std.error[nm])
+    li_b <- boot$percentile.95[nm, 1]
+    ls_b <- boot$percentile.95[nm, 2]
+  }
+  
+  p_valor <- 2 * pnorm(-abs(tab$estimate / tab$std.error))
+  p_valor[grepl("^lambda", nm)] <- NA_real_
+  
+  data.frame(
+    componente = ifelse(grepl("^gamma:", nm), "Cura",
+                        ifelse(grepl("^lambda", nm), "Ativacao", "Causa")),
+    parametro = nm,
+    estimativa = tab$estimate,
+    EP_Hessiana = tab$std.error,
+    LI95_Hessiana = tab$lower.95,
+    LS95_Hessiana = tab$upper.95,
+    EP_bootstrap = ep_b,
+    LI95_bootstrap = li_b,
+    LS95_bootstrap = ls_b,
+    p_valor = p_valor,
+    row.names = NULL
+  )
+}
+
+# 1. Comparacao de K=1,...,10 
+valores_K <- 1:10
+modelos <- lapply(valores_K, function(k) {
+  cat('\n--------------------------------------------\n')
+  cat('Iniciando K =', k, 'as', format(Sys.time(), '%H:%M:%S'), '\n')
   inicio <- Sys.time()
-  
   fit <- fit_vertical_pt_em(mel, K = k, trace = FALSE, compute_se = FALSE)
-  tempo <- as.numeric(difftime(Sys.time(), inicio, units = "secs"))
-  
-  cat("Modelo K =", k, "finalizado!\n")
-  cat("Convergiu:", fit$converged, "\n")
-  cat("Iterações do EM:", fit$iterations, "\n")
-  cat("Tempo gasto:", round(tempo, 2), "segundos\n")
-  cat("-----------------------------------\n")
-  
-  fit$tempo <- tempo
-  
-  return(fit)
+  fit$tempo <- as.numeric(difftime(Sys.time(), inicio, units = 'secs'))
+  cat('Convergiu:', fit$converged,
+      '| Iteracoes:', fit$iterations,
+      '| Tempo (s):', round(fit$tempo, 2), '\n')
+  fit
 })
+names(modelos) <- paste0('K=', valores_K)
 
-names(modelos) <- paste0("K=", 1:10)
-
-# Comparação dos modelos
-comparacao <- do.call(rbind, lapply(1:10, function(k) {
-  fit <- modelos[[k]]
-  npar <- length(fit$gamma) + length(fit$lambda) + length(fit$beta)
+comparacao <- do.call(rbind, lapply(valores_K, function(k) {
+  fit <- modelos[[paste0('K=', k)]]
+  p <- length(fit$gamma) + length(fit$lambda) + length(fit$beta)
   n <- nrow(fit$data)
-  data.frame(K = k, logLik = fit$logLik,
-             AIC = -2 * fit$logLik + 2 * npar,
-             BIC = -2 * fit$logLik + log(n) * npar,
-             convergiu = fit$converged)
+  aic <- -2 * fit$logLik + 2 * p
+  data.frame(K = k, logLik = fit$logLik, npar = p, AIC = aic,
+             AICc = if (n > p + 1) aic + 2*p*(p+1)/(n-p-1) else Inf,
+             BIC = -2*fit$logLik + log(n)*p,
+             convergiu = fit$converged, tempo_seg = fit$tempo)
 }))
 
-print(comparacao)
+print(comparacao, digits = 6, row.names = FALSE)
+write.csv(comparacao, 'tabela_6_comparacao_K1_a_K10.csv', row.names = FALSE)
+saveRDS(modelos, 'modelos_K1_a_K10.rds')
+cat('Menor BIC:', comparacao$K[which.min(
+  ifelse(comparacao$convergiu, comparacao$BIC, Inf))], '\n')
 
-# Quantidade de eventos em cada intervalo
-lapply(modelos, function(fit) fit$d_interval)
-# Estimativas das hazards de ativação
-lapply(modelos, function(fit) round(fit$lambda, 4))
-# Pontos de corte, em anos
-lapply(modelos, function(fit) round(fit$cuts, 2))
+# 2. Modelo final com k=5
+fit_k5 <- modelos[['K=5']]
+stopifnot(fit_k5$converged)
+print(fit_k5)
 
-data.frame(K = 1:length(modelos),
-           Cura_media = sapply(modelos, function(fit) mean(fit$cure)),
-           Eventos_min = sapply(modelos, function(fit) min(fit$d_interval)),
-           Eventos_max = sapply(modelos, function(fit) max(fit$d_interval)))
+cat('\nInformacao observada do modelo completo K=5...\n')
+fit_k5$se <- observed_information(fit_k5)
 
-# Seleção do melhor modelo pelo BIC
-melhor_k <- comparacao$K[which.min(ifelse(comparacao$convergiu,
-                                          comparacao$BIC, Inf))]
+cat('\nBootstrap do modelo completo K=5: B =', B_BOOT, '\n')
+boot_completo <- bootstrap_em(fit_k5, B = B_BOOT, seed = 2026, trace = TRUE)
+saveRDS(boot_completo, 'bootstrap_modelo_completo_K5.rds')
 
-fit_melanoma <- modelos[[melhor_k]]
+regressao_k5 <- tabela_regressao(fit_k5, boot_completo)
+print(regressao_k5, digits = 5, row.names = FALSE)
+write.csv(regressao_k5, 'tabela_7_regressao_completa_K5.csv', row.names = FALSE)
 
-cat("Melhor modelo pelo BIC: K =", melhor_k, "\n")
-print(fit_melanoma)
-summary(fit_melanoma)
+cat('Bootstrap completo:', boot_completo$successful, '/', B_BOOT,
+    '| falha:', boot_completo$failure_rate, '\n')
 
-# Profile used by Nicolaie et al. (2019): male, ulceration present and mean
-# values of all continuous covariates (on their original scales).
-profile_nicolaie <- data.frame(
-  sexo_reg = 1,
-  IDADE = mean(mel$IDADE),
-  ano = mean(mel$ano),
-  catend_reg = 1,
-  ecgrup_2_3_reg = 0,
-  ecgrup_4_reg =1,
-  m_reg = 1,  
-  RADIO =0,
-  QUIMIO=0,
-  CIRURGIA=1
-)
+# 3. Investigacao do estadio IV e metastase 
+frequencias_m <- with(fit_k5$data[fit_k5$event == 1, ],
+                      table(ecgrup_4_reg, m_reg, status))
+print(frequencias_m)
+tabela_frequencias <- as.data.frame(frequencias_m,
+                                    responseName = 'frequencia')
+print(tabela_frequencias, row.names = FALSE)
+write.csv(tabela_frequencias, 'tabela_8_frequencias_estadio_metastase.csv',
+          row.names = FALSE)
 
-# Use 500 replicates for standard errors and at least 1000 for final percentile
-# intervals. The environment variable B_BOOT can be set for a quick pilot, e.g.
-# Sys.setenv(B_BOOT = 100), before sourcing this file.
-B_BOOT <- as.integer(Sys.getenv("B_BOOT", "500"))
-time_grid <- seq(0, max(mel$time) / 365.25, length.out = 301)
-boot_melanoma <- bootstrap_full(
-  fit_melanoma, profile = profile_nicolaie, times = time_grid,
-  B = B_BOOT, seed = 2026, trace = TRUE
-)
+# Instabilidade dos dois coeficientes entre reamostragens bootstrap.
+coef_diagnostico <- c('beta:ecgrup_4_reg', 'beta:m_reg')
+draws <- boot_completo$draws
+cor_boot <- cor(draws[, coef_diagnostico[1]],
+                draws[, coef_diagnostico[2]])
+cat('Correlacao bootstrap estadio IV x metastase:', cor_boot, '\n')
 
-# Main inferential table: nonparametric-bootstrap standard errors and percentile
-# 95% confidence intervals. Unlike Wald intervals, lambda limits remain positive.
-print(boot_melanoma$parameter_table, digits = 4, row.names = FALSE)
-cat("Bootstrap successful fits:", boot_melanoma$successful, "of", B_BOOT, "\n")
+quantis_boot <- t(apply(draws[, coef_diagnostico, drop = FALSE], 2,
+                        quantile, probs = c(.025, .5, .975)))
+tabela_instabilidade <- data.frame(
+  parametro = coef_diagnostico,
+  EP_Hessiana = regressao_k5$EP_Hessiana[match(
+    coef_diagnostico, regressao_k5$parametro)],
+  EP_bootstrap = unname(boot_completo$std.error[coef_diagnostico]),
+  LI_bootstrap = quantis_boot[, 1],
+  Mediana_bootstrap = quantis_boot[, 2],
+  LS_bootstrap = quantis_boot[, 3],
+  correlacao_entre_coeficientes = cor_boot,
+  row.names = NULL)
+print(tabela_instabilidade, digits = 5, row.names = FALSE)
+write.csv(tabela_instabilidade, 'diagnostico_bootstrap_estadio_metastase.csv',
+          row.names = FALSE)
 
-# Profile-specific cure probability and its bootstrap percentile interval.
-cure_band <- boot_melanoma$bands$cure_probability
-cure_summary <- data.frame(
-  profile = "Female, SUS, EC group 4, metastase, with only surgery, continuous covariates at their means",
-  estimate = cure_band$estimate[1], lower.95 = cure_band$lower[1],
-  upper.95 = cure_band$upper[1])
-print(cure_summary, digits = 4, row.names = FALSE)
+# 4. Modelo alternativo K=5: retirar m_reg APENAS da componente da causa 
+# A componente de cura continua com m_reg, sem alterar gamma nem a cura.
+form_causa_sem_m <- update(fit_k5$cause_formula, ~ . - m_reg)
+print(form_causa_sem_m)
 
-# Four-panel PDF analogous to Figures 1--4 in Nicolaie et al. (2019), adapted
-# to the promotion-time susceptible stratum N>0.
-plot_nicolaie_figures(
-  fit_melanoma, boot_melanoma,
-  file = "melanoma_vertical_promotion_time_figures.pdf"
-)
+fit_sem_m <- fit_vertical_pt_em(
+  fit_k5$raw_data,
+  K = 5,
+  cuts = fit_k5$cuts,
+  count_formula = fit_k5$count_formula,
+  cause_formula = form_causa_sem_m,
+  scaling = fit_k5$scale_info,
+  compute_se = FALSE)
+stopifnot(fit_sem_m$converged)
 
-# The same figure on the active graphics device.
-plot_nicolaie_figures(fit_melanoma, boot_melanoma)
-# 9 6
+criterios <- function(fit) {
+  p <- length(fit$gamma) + length(fit$lambda) + length(fit$beta)
+  n <- nrow(fit$data)
+  aic <- -2 * fit$logLik + 2 * p
+  c(logLik = fit$logLik, parametros = p,
+    AIC = aic, AICc = aic + 2*p*(p+1)/(n-p-1),
+    BIC = -2 * fit$logLik + log(n) * p)
+}
 
-# Basic diagnostics required before reporting bootstrap inference.
-diagnostics <- list(
-  em_converged = fit_melanoma$converged,
-  loglik_monotone = all(diff(fit_melanoma$logLik_history) >= -1e-7),
-  events_per_interval = fit_melanoma$d_interval,
-  events_by_cause = table(factor(mel$status[mel$status != 2], levels = c(1, 3))),
-  bootstrap_successful = boot_melanoma$successful,
-  bootstrap_failure_rate = boot_melanoma$failure_rate,
-  bootstrap_reliable = boot_melanoma$failure_rate <= 0.20
-)
-print(diagnostics)
+comparacao_m <- as.data.frame(rbind(
+  Completo = criterios(fit_k5),
+  Sem_m_na_causa = criterios(fit_sem_m)))
+comparacao_m$Modelo <- rownames(comparacao_m)
+comparacao_m <- comparacao_m[, c('Modelo', 'parametros', 'logLik',
+                                 'AIC', 'AICc', 'BIC')]
 
-# Conditions for interpreting the bootstrap standard errors and intervals:
-# 1. independent, non-informative right censoring;
-# 2. adequate follow-up to identify the cure plateau;
-# 3. full-rank count and cause design matrices;
-# 4. no complete/quasi-complete separation in the cause model;
-# 5. failures and positive exposure in every activation interval;
-# 6. an interior solution: finite gamma/beta and strictly positive lambdas;
-# 7. at least 80%--90% successful bootstrap refits;
-# 8. convergence to the same maximum from several starting values;
-# 9. B >= 500 for SEs and preferably B >= 1000 for percentile intervals.
+LR <- 2 * (fit_k5$logLik - fit_sem_m$logLik)
+p_LR <- pchisq(max(LR, 0), df = 1, lower.tail = FALSE)
+
+comparacao_m$LR <- c(NA_real_, LR)
+comparacao_m$p_LR <- c(NA_real_, p_LR)
+print(comparacao_m, digits = 6, row.names = FALSE)
+write.csv(comparacao_m, 'tabela_9_completo_versus_sem_m.csv', row.names = FALSE)
+
+fit_sem_m$se <- observed_information(fit_sem_m)
+diag_modelos <- data.frame(
+  Modelo = c('Completo', 'Sem_m_na_causa'),
+  Hessiana_positiva = c(fit_k5$se$positive_definite,
+                        fit_sem_m$se$positive_definite),
+  EP_confiaveis = c(fit_k5$se$reliable, fit_sem_m$se$reliable),
+  Numero_condicao = c(fit_k5$se$condition_number,
+                      fit_sem_m$se$condition_number),
+  EP_beta_estadio_IV = c(
+    fit_k5$se$coefficients$std.error[match('beta:ecgrup_4_reg',
+                                           fit_k5$se$coefficients$parameter)],
+    fit_sem_m$se$coefficients$std.error[match('beta:ecgrup_4_reg',
+                                              fit_sem_m$se$coefficients$parameter)]))
+print(diag_modelos, digits = 6, row.names = FALSE)
+write.csv(diag_modelos, 'diagnosticos_completo_versus_sem_m.csv',
+          row.names = FALSE)
+
+# 5. Modelo FINAL: K=5 com m_reg apenas na causa 
+fit_final <- fit_sem_m
+fit_melanoma <- fit_final  
+mel_analise <- fit_final$raw_data
+
+vars_perfil <- c('sexo_reg', 'IDADE', 'ano', 'catend_reg',
+                 'ecgrup_2_3_reg', 'ecgrup_4_reg', 'm_reg',
+                 'RADIO', 'QUIMIO', 'CIRURGIA')
+escolher_perfil <- function(ec23, ec4, metastase) {
+  idx <- which(mel_analise$ecgrup_2_3_reg == ec23 &
+                 mel_analise$ecgrup_4_reg == ec4 &
+                 mel_analise$m_reg == metastase)
+  if (!length(idx)) stop('Nenhum registro observado para este estrato.')
+  d <- mel_analise[idx, , drop = FALSE]
+  escala_idade <- max(stats::sd(mel_analise$IDADE), 1)
+  escala_ano <- max(stats::sd(mel_analise$ano), 1)
+  distancia <- abs(d$IDADE - median(d$IDADE))/escala_idade +
+    abs(d$ano - median(d$ano))/escala_ano
+  ans <- d[which.min(distancia), vars_perfil, drop = FALSE]
+  rownames(ans) <- NULL
+  ans
+}
+perfis <- list('Estadio I, sem metastase' = escolher_perfil(0, 0, 0),
+               'Estadio IV, com metastase' = escolher_perfil(0, 1, 1))
+time_grid <- seq(0, max(mel_analise$time) / 365.25, length.out = 301)
+
+# 6. Bootstrap do modelo FINAL 
+#Primeiro perfil
+cat('\nBootstrap final K=5 - perfil I | B =', B_BOOT, '\n')
+boot_final_1 <- bootstrap_full(fit_final, profile = perfis[[1]], times = time_grid,
+                               B = B_BOOT, seed = 2026, trace = TRUE)
+saveRDS(boot_final_1, 'bootstrap_final_perfil_I_K5.rds')
+
+regressao_final <- tabela_regressao(fit_final, boot_final_1)
+print(regressao_final, digits = 5, row.names = FALSE)
+write.csv(regressao_final, 'tabela_10_regressao_final_K5.csv', row.names = FALSE)
+
+print(subset(regressao_final, parametro == 'beta:ecgrup_4_reg'),
+      digits = 6, row.names = FALSE)
+
+#Segundo perfil
+cat('\nBootstrap final K=5 - perfil IV | B =', B_BOOT, '\n')
+boot_final_2 <- bootstrap_full(
+  fit_final, profile = perfis[[2]], times = time_grid,
+  B = B_BOOT, seed = 2026, trace = TRUE)
+saveRDS(boot_final_2, 'bootstrap_final_perfil_IV_K5.rds')
+
+boots_perfis <- list('Estadio I, sem metastase' = boot_final_1,
+                     'Estadio IV, com metastase' = boot_final_2)
+
+tabela_bootstrap_validos <- data.frame(
+  modelo = c("Completo K5","Final K5 / perfil I","Final K5 / perfil IV"),
+  tentativas = B_BOOT,
+  validas = c(boot_completo$successful, boot_final_1$successful, boot_final_2$successful),
+  falhas = B_BOOT - c(boot_completo$successful, boot_final_1$successful, boot_final_2$successful))
+
+print(tabela_bootstrap_validos, row.names = FALSE)
+write.csv(
+  tabela_bootstrap_validos,
+  "diagnostico_bootstrap_validos.csv",
+  row.names = FALSE)
+
+# 7. Tabelas dos perfis e probabilidades de cura 
+tabela_perfis <- do.call(rbind, lapply(names(perfis), function(nm) {
+  data.frame(perfil = nm, perfis[[nm]], row.names = NULL)
+}))
+print(tabela_perfis, row.names = FALSE)
+write.csv(tabela_perfis, 'tabela_11_caracteristicas_perfis.csv', row.names = FALSE)
+
+cura_perfis <- do.call(rbind, lapply(names(boots_perfis), function(nm) {
+  b <- boots_perfis[[nm]]$bands$cure_probability
+  data.frame(perfil = nm, cura = b$estimate[1],
+             LI95 = b$lower[1], LS95 = b$upper[1],
+             bootstrap_sucesso = boots_perfis[[nm]]$successful)
+}))
+print(cura_perfis, digits = 5, row.names = FALSE)
+write.csv(cura_perfis, 'tabela_12_cura_dois_perfis_K5_final.csv',
+          row.names = FALSE)
+
+# CIFs do modelo completo com K=5
+CIF_completo_K5 <- predict(fit_k5,times = time_grid,type = "cif")
+
+# Comparacao com o modelo final reduzido
+comparacao_CIF_m <- data.frame(
+  curva = c("Sobrevivencia","CIF cancer osseo","CIF outras causas"),
+  diferenca_maxima = c(max(abs(predict(fit_k5, time_grid, type = "survival") -  S_ind)),
+                       max(abs(colMeans(CIF_completo_K5$cause1_melanoma) -F1_geral)),
+                       max(abs(colMeans(CIF_completo_K5$cause3_other) - F3_geral))))
+
+print(comparacao_CIF_m, digits = 8, row.names = FALSE)
+write.csv(
+  comparacao_CIF_m,
+  "comparacao_CIF_completo_sem_m_K5.csv",
+  row.names = FALSE)
+
+# 8. Curvas marginais para TODOS os pacientes - MODELO FINAL 
+cat('\nCalculando as curvas marginais para todos os pacientes...\n')
+inicio_geral <- Sys.time()
+S_ind <- predict(fit_final, times = time_grid, type = 'survival')
+CIF_ind <- predict(fit_final, times = time_grid, type = 'cif')
+p0_medio <- mean(fit_final$cure)
+p_susc <- 1 - p0_medio
+if (p_susc <= 0) stop('Nao ha massa suscetivel estimada.')
+
+S_geral <- colMeans(S_ind)
+F1_geral <- colMeans(CIF_ind$cause1_melanoma)
+F3_geral <- colMeans(CIF_ind$cause3_other)
+
+pred_geral <- data.frame(
+  time = time_grid,
+  survival_population = S_geral,
+  survival_susceptible = pmax(0, (S_geral - p0_medio) / p_susc),
+  cif_melanoma_population = F1_geral,
+  cif_other_population = F3_geral,
+  cif_melanoma_susceptible = F1_geral / p_susc,
+  cif_other_susceptible = F3_geral / p_susc,
+  cure_probability = rep(p0_medio, length(time_grid)))
+cat('Tempo CIF geral (s):',
+    round(as.numeric(difftime(Sys.time(), inicio_geral, units = 'secs')), 1), '\n')
+erro_CIF <- max(abs(with(pred_geral, survival_population +
+                           cif_melanoma_population + cif_other_population - 1)))
+cat('Erro maximo S+F1+F3-1:', erro_CIF, '\n')
+write.csv(pred_geral, 'curvas_marginais_K5_final.csv', row.names = FALSE)
+
+
+# 9. Graficos finais
+plot_nicolaie_adaptado <- function(estimativa, titulo,
+                                   bandas = NULL, objeto = NULL,
+                                   geral = FALSE, arquivo = NULL,
+                                   grupo_estadio = NULL) {
+  if (is.null(objeto)) stop('Informe objeto = fit_final para calcular o painel A.')
+  if (!geral && (is.null(grupo_estadio) || !grupo_estadio %in% c('I', 'IV'))) {
+    stop("Nos graficos por perfil, informe grupo_estadio = 'I' ou 'IV'.")
+  }
+  if (!is.null(arquivo)) grDevices::pdf(arquivo, width = 11, height = 8.5)
+  oldpar <- graphics::par(no.readonly = TRUE)
+  on.exit({
+    graphics::par(oldpar)
+    if (!is.null(arquivo)) grDevices::dev.off()
+  }, add = TRUE)
+  graphics::par(mfrow = c(2, 2), mar = c(4.2, 4.4, 3.3, 1),
+                oma = c(0, 0, 2, 0), las = 1)
+  cores <- c(cancer = '#0072B2', outras = '#D55E00',
+             pop = '#009E73', susc = '#CC79A7')
+  t <- estimativa$time
+  
+  # (a) KM e sobrevivencia prevista para exatamente o mesmo conjunto de dados
+  if (geral) {
+    idx <- rep(TRUE, nrow(objeto$data))
+    S_ajustada <- estimativa$survival_population
+  } else {
+    idx <- if (grupo_estadio == 'I') {
+      objeto$data$ecgrup_2_3_reg == 0 & objeto$data$ecgrup_4_reg == 0
+    } else {
+      objeto$data$ecgrup_4_reg == 1
+    }
+    if (!any(idx)) stop('Nao ha pacientes no grupo de estadio solicitado.')
+    # predict(..., newdata=NULL) preserva a ordem das linhas de objeto$data
+    S_todos <- predict(objeto, times = t, type = 'survival')
+    S_ajustada <- colMeans(S_todos[idx, , drop = FALSE])
+  }
+  km <- survival::survfit(
+    survival::Surv(objeto$data$time[idx], objeto$event[idx]) ~ 1
+  )
+  graphics::plot(km, conf.int = FALSE, mark.time = FALSE,
+                 col = 'gray30', lwd = 2, xlim = range(t), ylim = c(0, 1),
+                 xlab = 'Tempo (anos)', ylab = 'Sobrevivencia',
+                 main = '(a) Kaplan-Meier e modelo ajustado')
+  graphics::lines(t, S_ajustada, col = cores['pop'], lwd = 2)
+  graphics::legend('topright', c('Kaplan-Meier', 'Media prevista (K=5)'),
+                   col = c('gray30', cores['pop']), lty = 1, lwd = 2, bty = 'n')
+  
+  # Funcao auxiliar: desenha banda percentil quando fornecida
+  desenhar_banda <- function(campo, cor) {
+    if (!is.null(bandas) && !is.null(bandas[[campo]]))
+      add_band(bandas[[campo]], cor)
+  }
+  graphics::plot(t, estimativa$cif_melanoma_population, type = 'n',
+                 ylim = c(0,1), xlab = 'Tempo (anos)', ylab = 'Incidencia acumulada',
+                 main = '(b) CIF populacional')
+  desenhar_banda('cif_melanoma_population', cores['cancer'])
+  desenhar_banda('cif_other_population', cores['outras'])
+  graphics::lines(t, estimativa$cif_melanoma_population, col = cores['cancer'], lwd = 2)
+  graphics::lines(t, estimativa$cif_other_population, col = cores['outras'], lwd = 2)
+  graphics::legend('topleft', c('Cancer osseo','Outras causas'),
+                   col = cores[c('cancer','outras')], lty = 1, lwd = 2, bty = 'n')
+  
+  graphics::plot(t, estimativa$survival_population, type = 'n',
+                 ylim = c(0,1), xlab = 'Tempo (anos)', ylab = 'Sobrevivencia',
+                 main = '(c) Populacao e suscetiveis')
+  desenhar_banda('survival_population', cores['pop'])
+  desenhar_banda('survival_susceptible', cores['susc'])
+  graphics::lines(t, estimativa$survival_population, col = cores['pop'], lwd = 2)
+  graphics::lines(t, estimativa$survival_susceptible, col = cores['susc'], lwd = 2, lty = 2)
+  graphics::abline(h = estimativa$cure_probability[1], col = 'gray40', lty = 3)
+  graphics::legend('topright', c('Populacao','Suscetiveis','Fracao de cura'),
+                   col = c(cores['pop'],cores['susc'],'gray40'),
+                   lty = c(1,2,3), lwd = c(2,2,1), bty = 'n')
+  
+  graphics::plot(t, estimativa$cif_melanoma_susceptible, type = 'n',
+                 ylim = c(0,1), xlab = 'Tempo (anos)', ylab = 'Incidencia acumulada',
+                 main = '(d) CIF entre suscetiveis')
+  desenhar_banda('cif_melanoma_susceptible', cores['cancer'])
+  desenhar_banda('cif_other_susceptible', cores['outras'])
+  graphics::lines(t, estimativa$cif_melanoma_susceptible,
+                  col = cores['cancer'], lwd = 2)
+  graphics::lines(t, estimativa$cif_other_susceptible,
+                  col = cores['outras'], lwd = 2)
+  graphics::legend('topleft', c('Cancer osseo','Outras causas'),
+                   col = cores[c('cancer','outras')], lty = 1, lwd = 2, bty = 'n')
+  graphics::mtext(titulo, outer = TRUE, line = 0.4, cex = 1.1)
+  invisible(estimativa)
+}
+
+# Figuras finais K=5: dois perfis com bandas e grupo geral pontual.
+plot_nicolaie_adaptado(boot_final_1$estimate, 'Estadio I',
+                       bandas = boot_final_1$bands, objeto = fit_final,
+                       grupo_estadio = 'I')
+plot_nicolaie_adaptado(boot_final_2$estimate, 'Estadio IV',
+                       bandas = boot_final_2$bands, objeto = fit_final,
+                       grupo_estadio = 'IV')
+plot_nicolaie_adaptado(pred_geral, 'Geral', objeto = fit_final, geral = TRUE)
+
+# Salvar 
+plot_nicolaie_adaptado(
+  estimativa = pred_geral,
+  titulo = "K=5 - Todos os pacientes",
+  objeto = fit_final,
+  geral = TRUE,
+  arquivo = "figuras_gerais_K5_final.pdf")
+
+plot_nicolaie_adaptado(
+  estimativa = boot_final_1$estimate,
+  titulo = "K=5 - Estágio I, sem metástase",
+  bandas = boot_final_1$bands,
+  objeto = fit_final,
+  geral = FALSE,
+  grupo_estadio = "I",
+  arquivo = "figuras_estadio_I_K5_final.pdf")
+
+plot_nicolaie_adaptado(
+  estimativa = boot_final_2$estimate,
+  titulo = "K=5 - Estágio IV, com metástase",
+  bandas = boot_final_2$bands,
+  objeto = fit_final,
+  geral = FALSE,
+  grupo_estadio = "IV",
+  arquivo = "figuras_estadio_IV_K5_final.pdf")
+
+
+# 10. Diagnosticos finais 
+print(list(
+  convergencia_K5_completo = fit_k5$converged,
+  convergencia_K10_completo = fit_k10$converged,
+  convergencia_K5_final = fit_final$converged,
+  logLik_monotona_K5 = all(diff(fit_final$logLik_history) >= -1e-7),
+  eventos_por_intervalo_K5 = fit_final$d_interval,
+  eventos_por_intervalo_K10 = fit_k10$d_interval,
+  hessiana_positiva_final = fit_final$se$positive_definite,
+  EP_confiaveis_final = fit_final$se$reliable,
+  numero_condicao_final = fit_final$se$condition_number,
+  simetria_covariancia_final = max(abs(fit_final$se$vcov -
+                                         t(fit_final$se$vcov))),
+  erro_maximo_CIF = erro_CIF,
+  bootstrap_completo_sucesso = boot_completo$successful,
+  bootstrap_perfis_sucesso = sapply(boots_perfis, function(b) b$successful),
+  bootstrap_perfis_falha = sapply(boots_perfis, function(b) b$failure_rate)
+))
+
+saveRDS(fit_final, 'modelo_final_K5_sem_m_na_causa.rds')
