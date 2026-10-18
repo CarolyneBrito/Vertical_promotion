@@ -798,6 +798,19 @@ print(cura_perfis, digits = 5, row.names = FALSE)
 write.csv(cura_perfis, 'tabela_12_cura_dois_perfis_K5_final.csv',
           row.names = FALSE)
 
+# 8. Curvas marginais para TODOS os pacientes - MODELO FINAL 
+cat('\nCalculando as curvas marginais para todos os pacientes...\n')
+inicio_geral <- Sys.time()
+S_ind <- predict(fit_final, times = time_grid, type = 'survival')
+CIF_ind <- predict(fit_final, times = time_grid, type = 'cif')
+p0_medio <- mean(fit_final$cure)
+p_susc <- 1 - p0_medio
+if (p_susc <= 0) stop('Nao ha massa suscetivel estimada.')
+
+S_geral <- colMeans(S_ind)
+F1_geral <- colMeans(CIF_ind$cause1_melanoma)
+F3_geral <- colMeans(CIF_ind$cause3_other)
+
 # CIFs do modelo completo com K=5
 CIF_completo_K5 <- predict(fit_k5,times = time_grid,type = "cif")
 
@@ -814,18 +827,6 @@ write.csv(
   "comparacao_CIF_completo_sem_m_K5.csv",
   row.names = FALSE)
 
-# 8. Curvas marginais para TODOS os pacientes - MODELO FINAL 
-cat('\nCalculando as curvas marginais para todos os pacientes...\n')
-inicio_geral <- Sys.time()
-S_ind <- predict(fit_final, times = time_grid, type = 'survival')
-CIF_ind <- predict(fit_final, times = time_grid, type = 'cif')
-p0_medio <- mean(fit_final$cure)
-p_susc <- 1 - p0_medio
-if (p_susc <= 0) stop('Nao ha massa suscetivel estimada.')
-
-S_geral <- colMeans(S_ind)
-F1_geral <- colMeans(CIF_ind$cause1_melanoma)
-F3_geral <- colMeans(CIF_ind$cause3_other)
 
 pred_geral <- data.frame(
   time = time_grid,
@@ -972,11 +973,9 @@ plot_nicolaie_adaptado(
 # 10. Diagnosticos finais 
 print(list(
   convergencia_K5_completo = fit_k5$converged,
-  convergencia_K10_completo = fit_k10$converged,
   convergencia_K5_final = fit_final$converged,
   logLik_monotona_K5 = all(diff(fit_final$logLik_history) >= -1e-7),
   eventos_por_intervalo_K5 = fit_final$d_interval,
-  eventos_por_intervalo_K10 = fit_k10$d_interval,
   hessiana_positiva_final = fit_final$se$positive_definite,
   EP_confiaveis_final = fit_final$se$reliable,
   numero_condicao_final = fit_final$se$condition_number,
@@ -989,3 +988,11 @@ print(list(
 ))
 
 saveRDS(fit_final, 'modelo_final_K5_sem_m_na_causa.rds')
+
+
+
+#######################
+# IC 95% das taxas lambda na escala logaritmica
+# ep_log_lambda <- sqrt(diag(V_u)[idx_lambda])
+# table$lower.95[idx_lambda] <- exp(log(object$lambda) - 1.96 * ep_log_lambda)
+# table$upper.95[idx_lambda] <- exp(og(object$lambda) + 1.96 * ep_log_lambda)

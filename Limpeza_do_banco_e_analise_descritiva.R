@@ -70,15 +70,12 @@ table(dados_org$ecgrup_cat, dados_org$ecgrup_4_reg, useNA="always")
 table(dados_org$m_cat, dados_org$m_reg, useNA="always")
 
 table(dados$IDMITOTIC, useNA="always")
-write.csv(dados_org, "dados_ossos.csv", row.names = FALSE)
 
-# Banco em CSV --------
-dados_org <- read_csv("dados_ossos.csv")
 # Critérios de exclusão -----
 dados_ex<- dados %>% mutate(time = as.numeric(DTULTINFO - dados$DTDIAG),
-                               status = case_when(ULTINFO %in% c(1,2) ~ 0,
-                                                  ULTINFO == 3 ~ 1,
-                                                  ULTINFO == 4 ~ 2)) %>% 
+                            status = case_when(ULTINFO %in% c(1,2) ~ 0,
+                                               ULTINFO == 3 ~ 1,
+                                               ULTINFO == 4 ~ 2)) %>% 
   filter(time >= 0) %>% 
   mutate(time = time+1) %>% 
   filter(TOPOGRUP %in% c("C40","C41")) %>% 
@@ -104,6 +101,10 @@ for (v in names(dados_ex)) {
     )
   }
 }
+
+# Banco em CSV --------
+write.csv(dados_org, "dados_ossos.csv", row.names = FALSE)
+dados_org <- read_csv("Banco de dados/dados_ossos.csv")
 
 # Gráfico FIA GERAL ------
 setwd("~/Estudos/Doutorado/Matérias/Sobrevivência/Projeto Vertical Promotion/Gráficos")
