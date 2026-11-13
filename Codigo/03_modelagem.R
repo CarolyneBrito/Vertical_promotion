@@ -274,6 +274,54 @@ observed_information <- function(object, condition_limit = 1e10) {
        coefficients = table, cure = cure_table)
 }
 
+# 3. Matriz de Informação Observada Analítica via Fórmula de Louis (1982)
+compute_louis_se <- function(gamma, lambda, beta, X, Z, event, cause_other, time, E, ik, cuts) {
+  p <- length(gamma)
+  K <- length(lambda)
+  q <- length(beta)
+  n <- nrow(X)
+  
+  theta <- exp(as.vector(X %*% gamma))
+  a     <- activation_terms(time, lambda, cuts, E)
+  vhat  <- theta * a$S0  # Var[N_i | dados_i]
+  
+  # Informação Completa (I_comp)
+  I_comp <- matrix(0, nrow = p + K, ncol = p + K)
+  I_comp[1:p, 1:p] <- t(X) %*% (theta * X)
+  for (k in seq_len(K)) {
+    events_k <- sum(event == 1L & ik == k)
+    I_comp[p + k, p + k] <- events_k / (lambda[k]^2)
+  }
+  
+  # Informação Ausente (I_miss)
+  I_miss <- matrix(0, nrow = p + K, ncol = p + K)
+  for (i in seq_len(n)) {
+    A_i <- c(X[i, ], -E[i, ])
+    I_miss <- I_miss + vhat[i] * outer(A_i, A_i)
+  }
+  
+  # Informação Observada
+  I_obs_gl <- I_comp - I_miss
+  vcov_gl  <- tryCatch(solve(I_obs_gl), error = function(e) matrix(NA, p + K, p + K))
+  se_gl    <- sqrt(diag(vcov_gl))
+  
+  # Componente de causas (Regressão Logística)
+  ind <- event == 1L
+  Z_ev <- Z[ind, , drop = FALSE]
+  eta_z <- as.vector(Z_ev %*% beta)
+  p_cause <- 1 / (1 + exp(-eta_z))
+  w <- p_cause * (1 - p_cause)
+  I_obs_beta <- t(Z_ev) %*% (w * Z_ev)
+  
+  vcov_beta <- tryCatch(solve(I_obs_beta), error = function(e) matrix(NA, q, q))
+  se_beta   <- sqrt(diag(vcov_beta))
+  
+  se_all <- c(se_gl[1:p], se_gl[p + seq_len(K)], se_beta)
+  names(se_all) <- c(paste0("gamma_", 0:(p-1)), paste0("lambda_", 1:K), paste0("beta_", 0:(q-1)))
+  
+  list(se = se_all, vcov_gl = vcov_gl, vcov_beta = vcov_beta)
+}
+
 # ---------------------------- Bootstrap standard errors ----------------------
 
 bootstrap_em <- function(object, B = 500L, seed = 2026L, trace = TRUE) {
@@ -533,7 +581,7 @@ print.vertical_pt_em <- function(x, ...) {
 }
 
 # ============================== DATA ANALYSIS ================================
-setwd("~/Estudos/Doutorado/Materias/Sobrevivência/Projeto Vertical Promotion/result_reg")
+setwd("~/Estudos/Doutorado/Materias/Sobrevivência/Projeto Vertical Promotion/Resultados_codigo")
 
 mel <- dados_org %>%
   dplyr::select(time, status, sexo_reg, IDADE, ano, catend_reg,
@@ -549,6 +597,8 @@ B_BOOT <- 500L
 tabela_regressao <- function(fit, boot) {
   tab <- fit$se$coefficients
   nm <- tab$parameter
+  ep_louis <- unname(fit$louis$se)
+  stopifnot(length(ep_louis) == nrow(tab))
   if (!is.null(boot$parameter_table)) {  # resultado de bootstrap_full()
     b <- boot$parameter_table[match(nm, boot$parameter_table$parameter), ]
     ep_b <- b$bootstrap.se
@@ -571,6 +621,9 @@ tabela_regressao <- function(fit, boot) {
     EP_Hessiana = tab$std.error,
     LI95_Hessiana = tab$lower.95,
     LS95_Hessiana = tab$upper.95,
+    EP_Louis = ep_louis,
+    LI95_Louis = tab$estimate - 1.96 * ep_louis,
+    LS95_Louis = tab$estimate + 1.96 * ep_louis,
     EP_bootstrap = ep_b,
     LI95_bootstrap = li_b,
     LS95_bootstrap = ls_b,
@@ -618,6 +671,15 @@ print(fit_k5)
 
 cat('\nInformacao observada do modelo completo K=5...\n')
 fit_k5$se <- observed_information(fit_k5)
+fit_k5$louis <- compute_louis_se(
+  gamma = fit_k5$gamma, lambda = fit_k5$lambda, beta = fit_k5$beta,
+  X = fit_k5$X, Z = fit_k5$Z,
+  event = fit_k5$event, cause_other = fit_k5$cause_other,
+  time = fit_k5$data$time,
+  E = exposure_matrix(fit_k5$data$time, fit_k5$cuts),
+  ik = interval_index(fit_k5$data$time, fit_k5$cuts),
+  cuts = fit_k5$cuts
+)
 
 cat('\nBootstrap do modelo completo K=5: B =', B_BOOT, '\n')
 boot_completo <- bootstrap_em(fit_k5, B = B_BOOT, seed = 2026, trace = TRUE)
@@ -652,6 +714,12 @@ quantis_boot <- t(apply(draws[, coef_diagnostico, drop = FALSE], 2,
 tabela_instabilidade <- data.frame(
   parametro = coef_diagnostico,
   EP_Hessiana = regressao_k5$EP_Hessiana[match(
+    coef_diagnostico, regressao_k5$parametro)],
+  EP_Louis = regressao_k5$EP_Louis[match(
+    coef_diagnostico, regressao_k5$parametro)],
+  LI95_Louis = regressao_k5$LI95_Louis[match(
+    coef_diagnostico, regressao_k5$parametro)],
+  LS95_Louis = regressao_k5$LS95_Louis[match(
     coef_diagnostico, regressao_k5$parametro)],
   EP_bootstrap = unname(boot_completo$std.error[coef_diagnostico]),
   LI_bootstrap = quantis_boot[, 1],
@@ -703,6 +771,15 @@ print(comparacao_m, digits = 6, row.names = FALSE)
 write.csv(comparacao_m, 'tabela_9_completo_versus_sem_m.csv', row.names = FALSE)
 
 fit_sem_m$se <- observed_information(fit_sem_m)
+fit_sem_m$louis <- compute_louis_se(
+  gamma = fit_sem_m$gamma, lambda = fit_sem_m$lambda, beta = fit_sem_m$beta,
+  X = fit_sem_m$X, Z = fit_sem_m$Z,
+  event = fit_sem_m$event, cause_other = fit_sem_m$cause_other,
+  time = fit_sem_m$data$time,
+  E = exposure_matrix(fit_sem_m$data$time, fit_sem_m$cuts),
+  ik = interval_index(fit_sem_m$data$time, fit_sem_m$cuts),
+  cuts = fit_sem_m$cuts
+)
 diag_modelos <- data.frame(
   Modelo = c('Completo', 'Sem_m_na_causa'),
   Hessiana_positiva = c(fit_k5$se$positive_definite,
@@ -714,12 +791,16 @@ diag_modelos <- data.frame(
     fit_k5$se$coefficients$std.error[match('beta:ecgrup_4_reg',
                                            fit_k5$se$coefficients$parameter)],
     fit_sem_m$se$coefficients$std.error[match('beta:ecgrup_4_reg',
-                                              fit_sem_m$se$coefficients$parameter)]))
+                                              fit_sem_m$se$coefficients$parameter)]),
+  EP_Louis_beta_estadio_IV = c(
+    regressao_k5$EP_Louis[match('beta:ecgrup_4_reg', regressao_k5$parametro)],
+    unname(fit_sem_m$louis$se)[match('beta:ecgrup_4_reg',
+                                     fit_sem_m$se$coefficients$parameter)]))
 print(diag_modelos, digits = 6, row.names = FALSE)
 write.csv(diag_modelos, 'diagnosticos_completo_versus_sem_m.csv',
           row.names = FALSE)
 
-# 5. Modelo FINAL: K=5 com m_reg apenas na causa 
+# 5. Modelo FINAL: K=5 com m_reg apenas na cura 
 fit_final <- fit_sem_m
 fit_melanoma <- fit_final  
 mel_analise <- fit_final$raw_data

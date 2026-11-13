@@ -1,0 +1,1355 @@
+% =============================================================================
+% PROJETO - MODELO DE TEMPO DE PROMOÇÃO E MODELAGEM VERTICAL
+% =============================================================================
+
+\documentclass[11pt,a4paper]{article}
+
+% ---------------------------------------------------------------------------
+% Pacotes
+% ---------------------------------------------------------------------------
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage[brazil]{babel}
+\usepackage{booktabs}
+\usepackage{tabularx}
+\usepackage{array}
+\usepackage{geometry}
+\usepackage{enumitem}
+\usepackage{float}
+\usepackage{tikz}
+\usepackage{hyperref}
+\usepackage{xcolor}
+\usepackage{amsmath,amssymb,amsfonts,bm,mathtools}
+\usepackage{booktabs,tabularx,array}
+\usepackage{graphicx}
+\usepackage{microtype}
+\usepackage{enumitem}
+\usepackage{multirow}
+\usepackage{float}
+\usepackage{booktabs}
+\usepackage{adjustbox}
+\usepackage{makecell}
+\usepackage{booktabs}
+\usepackage{longtable}
+
+\usepackage[round,authoryear]{natbib}
+
+\usetikzlibrary{arrows.meta,positioning,shapes.geometric}
+
+\geometry{
+    a4paper,
+    left=2.3cm,
+    right=2.3cm,
+    top=2.1cm,
+    bottom=2.1cm
+}
+
+\setlength{\parindent}{1.25cm}
+\setlength{\parskip}{0.15cm}
+
+\hypersetup{
+    colorlinks=true,
+    linkcolor=black,
+    citecolor=black,
+    urlcolor=blue
+}
+
+\newcommand{\E}{\operatorname{E}}
+\newcommand{\Var}{\operatorname{Var}}
+\newcommand{\Prb}{\operatorname{Pr}}
+\newcommand{\logit}{\operatorname{logit}}
+\newcommand{\ind}{\mathbb{I}}
+\newcommand{\trans}{\mathsf{T}}
+\newcommand{\btheta}{\bm{\theta}}
+\newcommand{\bgamma}{\bm{\gamma}}
+\newcommand{\balpha}{\bm{\alpha}}
+
+\hypersetup{colorlinks=true,linkcolor=blue!55!black,
+ citecolor=blue!55!black,urlcolor=blue!55!black}
+
+% ---------------------------------------------------------------------------
+% Documento
+% ---------------------------------------------------------------------------
+
+\begin{document}
+\vspace{-0.8cm}
+\begin{center}
+    {\Large \textbf{A Promotion-Time Cure Model for Competing Risks under Vertical
+Modeling: An Application to Bone Neoplasm Data}}\\[0.3cm]
+    {\large Carolyne S. de Brito \quad Vicente G. Cancho}
+\end{center}
+
+\vspace{0.3cm}
+
+% =============================================================================
+\vspace{-0.8cm}
+
+\section{Resumo}
+
+A análise de sobrevivência na presença de riscos competitivos e fração de cura requer modelos capazes de representar simultaneamente a ocorrência dos eventos, suas diferentes causas e a possibilidade de uma parcela da população não falhar pelos eventos em estudo. Neste trabalho, propõe-se um modelo de tempo de promoção com fração de cura incorporado a estrutura de modelagem vertical para riscos competitivos. A abordagem é composta pelo número de fatores latentes estimados por uma distribuição Poisson, cuja média depende de covariáveis e determina a fração de cura; os tempos de ativação desses fatores, que seguem uma distribuição exponencial por partes; e as probabilidades condicionais das causas de falha, sendo modeladas por regressão logística multinomial. Essa construção permite decompor a verossimilhança em uma componente associada ao tempo até a falha e outra relacionada à distribuição das causas competitivas. A estimação dos parâmetros é realizada por máxima verossimilhança, utilizando o algoritmo EM para o componente de tempo de promoção e regressão logística para o componente vertical. Os erros padrão são calculados por meio da Hessiana observada, da identidade de Louis e de bootstrap não paramétrico. A metodologia foi aplicada a dados de 2.613 pacientes com neoplasias malignas dos ossos e das cartilagens articulares, registrados no estado de São Paulo entre 2000 e 2022, considerando morte por câncer ósseo e morte por outras causas. O modelo selecionado apresentou cinco intervalos de ativação e permitiu identificar associações entre características clínicas e demográficas e os diferentes componentes da sobrevivência.  Os resultados indicam que a abordagem proposta constitui uma alternativa relevante para a análise de dados com riscos competitivos e fração de cura, permitindo estimar a sobrevivência populacional, a fração de cura e as funções de incidência acumulada, além de distinguir os efeitos das covariáveis sobre a ocorrência global das falhas e sobre a distribuição relativa das causas.
+
+\textbf{Palavras-chave:} Análise de sobrevivência; Riscos competitivos; Fração de cura; Tempo de promoção; Modelagem vertical.
+\section{Introdução}
+
+A análise de sobrevivência tem como objetivo estudar o tempo até a ocorrência de um evento de interesse, considerando a possibilidade de censura durante o acompanhamento. Em diversas aplicações, entretanto, os indivíduos podem estar sujeitos a diferentes causas de falha, de modo que a ocorrência de uma delas impede a observação posterior das demais como primeiro evento. Essa estrutura caracteriza a presença de riscos competitivos e sua análise requer métodos capazes de considerar simultaneamente o tempo até a falha e sua causa. Entre as principais abordagens estão os modelos de riscos causa específico, que descreve a taxa instantânea de ocorrência de cada evento, os modelos de riscos de subdistribuição, propostos por \cite{fine1999proportional}, que permitem avaliar os efeitos das covariáveis sobre o risco de subdistribuição e, consequentemente, sobre a função de incidência acumulada. Embora essas abordagens sejam amplamente utilizadas, suas interpretações são distintas, especialmente em relação à associação das covariáveis com a ocorrência dos eventos competitivos \citep{putter2007tutorial, andersen2012competing}
+
+Uma abordagem alternativa consiste em modelar a distribuição conjunta do tempo até a falha e da causa responsável pela sua ocorrência. \citet{larson1985mixture} propuseram um modelo de mistura para riscos competitivos, no qual a distribuição conjunta é representada pela distribuição da causa de falha e pela distribuição do tempo condicional à causa. Posteriormente, \cite{nicolaie2010vertical} desenvolveram a modelagem vertical, que considera uma decomposição diferente, baseada na distribuição marginal do tempo até qualquer falha e na distribuição da causa condicionalmente ao instante em que o evento ocorre. Essa abordagem permite modelar separadamente o tempo até a ocorrência de qualquer falha e a distribuição das causas responsáveis pelos eventos. Para isso, a modelagem vertical considera a função de risco total e as probabilidades de ocorrência de cada causa, condicionadas ao instante da falha, denominadas riscos relativos específicos por causa.
+
+A principal característica dessa abordagem é a possibilidade de especificar separadamente os efeitos das covariáveis sobre o tempo até a falha e sobre a distribuição das causas. O componente do tempo pode ser representado por modelos convencionais de sobrevivência, enquanto as probabilidades relativas das causas podem ser modeladas por regressão logística multinomial, permitindo incorporar covariáveis e efeitos que variam ao longo do tempo. A partir da combinação desses componentes, são obtidas as funções de risco específicas das causas e as respectivas funções de incidência acumulada. \citet{nicolaie2010vertical} investigaram essa formulação utilizando modelos flexíveis para as probabilidades relativas, mostrando que a abordagem pode proporcionar ganhos de eficiência na estimação das funções de incidência acumulada em relação à estimação não paramétrica convencional. Além disso, a decomposição vertical permite distinguir covariáveis associadas à ocorrência global dos eventos daquelas relacionadas à distribuição das causas de falha, oferecendo uma interpretação dos diferentes componentes do processo de sobrevivência.
+
+A modelagem de riscos competitivos também pode ser estendida para situações em que uma parcela da população não é suscetível à ocorrência dos eventos considerados. Essa característica pode ser observada em estudos nos quais a função de sobrevivência apresenta uma tendência de estabilização em períodos mais longos de acompanhamento. Para representar esse comportamento, os modelos de fração de cura permitem incorporar uma parcela da população não suscetível ao evento de interesse. Em situações com riscos competitivos, essa condição pode ser definida em relação a uma causa específica ou ao conjunto de eventos considerados, dependendo da formulação adotada. Entre as principais abordagens estão os modelos de cura por mistura e os modelos sem mistura explícita, que se diferenciam pela forma como a fração de cura é incorporada à função de sobrevivência populacional \citep{amico2018cure}.
+
+A formulação clássica dos modelos de cura por mistura tem origem nos trabalhos de \cite{boag1949maximum} e \cite{berkson1952survival}, que consideram que a população é composta por indivíduos suscetíveis e não suscetíveis ao evento de interesse. Nessa formulação, a função de sobrevivência populacional é representada por uma combinação entre a probabilidade de cura e a função de sobrevivência condicional dos indivíduos suscetíveis. Dessa forma, a modelagem pode ser dividida em uma componente de incidência, relacionada à probabilidade de suscetibilidade, e uma componente de latência, relacionada à distribuição dos tempos de falha entre os indivíduos não curados. Essa estrutura foi posteriormente ampliada para incorporar covariáveis por meio de modelos de regressão, incluindo formulações semi-paramétricas baseadas em riscos proporcionais \citep{sy2000estimation}.
+
+Além dos modelos de mistura, a fração de cura pode ser representada por meio dos modelos de tempo de promoção, que utilizam um mecanismo estocástico de ativação de fatores latentes para descrever a ocorrência da falha \citep{Yakovlev1996}. Nessa abordagem, considera-se que cada indivíduo possui um número não observado de fatores capazes de produzir a falha, geralmente representado por uma distribuição Poisson. Quando existem fatores latentes, o tempo até a ocorrência do evento corresponde ao menor dos respectivos tempos de ativação. Já os indivíduos que não possuem fatores latentes são considerados curados. Assim, a fração de cura é determinada diretamente pelo mecanismo de geração dos tempos de sobrevivência, sem a necessidade de especificar separadamente um indicador binário de suscetibilidade. \cite{chen1999new} desenvolveram uma formulação bayesiana dessa classe de modelos, enquanto \cite{tsodikov2003estimating} investigaram suas relações com os modelos de mistura convencionais e suas propriedades de regressão. Posteriormente, \citet{yin2005cure} e \citet{rodrigues2009unification} apresentaram formulações que estabelecem relações entre diferentes classes de modelos de cura, enquanto \citet{cooner2007flexible} consideraram extensões baseadas em diferentes mecanismos de ativação de fatores latentes. Ainda nesse contexto, \citet{gallardo2021alternative} propuseram uma extensão do modelo de tempo de promoção utilizando a distribuição Bell para representar o número de fatores latentes, permitindo acomodar sobredispersão e realizar a estimação por máxima verossimilhança por meio do algoritmo EM.
+
+A presença de riscos competitivos torna a modelagem da fração de cura mais complexa, pois a ausência de suscetibilidade a uma determinada causa não implica necessariamente que o indivíduo esteja livre do risco de ocorrência das demais falhas. Dessa forma, diferentes modelos foram desenvolvidos para representar conjuntamente a proporção de indivíduos curados, os tempos de sobrevivência e as causas competitivas.  \citet{basu2010breast} desenvolveram uma abordagem bayesiana de cura por mistura na presença de riscos competitivos. Posteriormente, \cite{choi2015efficient} propuseram uma abordagem semi-paramétrica de cura por mistura para dados de riscos competitivos, permitindo incorporar covariáveis nas distribuições associadas aos diferentes tipos de falha. \cite{choi2018semiparametric} desenvolveram modelos semi-paramétricos de tempo de falha acelerado combinados com uma regressão logística multinomial para representar as causas competitivas dentro de uma estrutura de mistura com fração de cura. Já \citet{wang2021semiparametric} consideraram um modelo semiparamétrico de cura por mistura com riscos proporcionais que permite a presença de um risco competitivo não curável, distinguindo a possibilidade de cura em relação ao evento principal da suscetibilidade aos demais eventos. Mais recentemente, \cite{debrito2026parametricmixturecurerate} apresentaram uma extensão paramétrica do modelo de cura por mistura para riscos competitivos, utilizando máxima verossimilhança com dados aumentados para a estimação dos parâmetros.
+
+Uma alternativa para a fração de cura consiste na utilização de distribuições de sobrevivência defeituosas, nas quais a fração de cura decorre diretamente das propriedades da distribuição considerada. Nessa direção, \cite{silpa2026defective} propuseram modelos de regressão baseados nas distribuições Gompertz defeituosa e gaussiana inversa defeituosa para dados de riscos competitivos com fração de cura. Essas contribuições evidenciam que diferentes mecanismos podem ser empregados para incorporar uma fração de cura à análise de riscos competitivos, dependendo das hipóteses adotadas para a distribuição dos tempos e para a suscetibilidade aos eventos.
+
+No contexto da modelagem vertical, \cite{Nicolaie2019} propuseram uma extensão que incorpora uma fração de cura à distribuição dos tempos de sobrevivência. A abordagem combina um modelo de cura por mistura para representar a suscetibilidade, um modelo de riscos proporcionais para a latência entre os indivíduos não curados e um componente para a distribuição relativa das causas competitivas. Dessa forma, esse modelo incorpora a possibilidade de indivíduos não suscetíveis e faz a decomposição entre o tempo até a falha e sua causa.
+
+Entretanto, a formulação de \citet{Nicolaie2019} considera a fração de cura por meio de um modelo de mistura, no qual a suscetibilidade é representada por uma variável latente binária e a probabilidade de cura é especificada separadamente da distribuição dos tempos de falha entre os indivíduos suscetíveis. Como alternativa, propõe-se incorporar o mecanismo de tempo de promoção à modelagem vertical, permitindo que a fração de cura seja determinada diretamente pela distribuição do número de fatores latentes. Nessa construção, não é necessário introduzir uma parametrização independente para a probabilidade de cura, uma vez que ela é obtida a partir do número esperado desses fatores. Essa característica estabelece uma relação direta entre a fração de cura e a distribuição marginal dos tempos de falha, proporcionando uma estrutura integrada para a modelagem da sobrevivência populacional.
+
+A combinação dessas abordagens resulta em um modelo estruturado em três componentes. O primeiro descreve o número de fatores latentes por meio de uma distribuição Poisson, em que sua média pode depender de covariáveis por meio de uma função de ligação logarítmica, determinando, assim, a fração de cura. O segundo componente representa os tempos de ativação desses fatores por um modelo exponencial por partes, permitindo que as taxas de ativação variem ao longo do acompanhamento. Por fim, o componente vertical utiliza uma regressão logística multinomial para modelar as probabilidades das diferentes causas de falha, condicionadas ao tempo de ocorrência do evento, considerando os efeitos das covariáveis e do tempo. Nessa especificação, as covariáveis incluídas no componente Poisson influenciam o risco total populacional de forma proporcional, enquanto o componente vertical permite representar alterações na distribuição relativa das causas. A partir da combinação desses componentes, são obtidas a função de sobrevivência populacional e as funções de incidência acumulada para cada causa competitiva.
+
+A estrutura proposta também permite fatorizar a verossimilhança em uma componente relacionada ao tempo até a falha e à fração de cura e outra correspondente à distribuição condicional das causas competitivas. Para a estimação dos parâmetros do modelo de tempo de promoção, o número de fatores latentes pode ser tratado como uma variável não observada, permitindo a utilização do algoritmo EM \citep{dempster1977maximum}. Sob a hipótese de distribuição Poisson, a etapa E admite uma expressão explícita para a esperança condicional do número de fatores latentes, enquanto a etapa M permite atualizar os parâmetros associados à distribuição Poisson e às taxas de ativação exponenciais por partes. Os parâmetros do componente vertical podem ser estimados separadamente por regressão logística, considerando os indivíduos que apresentaram falha. Além disso, a incerteza das estimativas pode ser avaliada por meio da matriz de informação observada \citep{louis1982finding} ou por bootstrap.
+
+
+Diante desse contexto, o presente estudo propõe uma extensão da modelagem vertical para riscos competitivos, incorporando a fração de cura por meio do mecanismo de tempo de promoção. O objetivo é desenvolver um procedimento de estimação para essa formulação e investigar seu desempenho na estimação da fração de cura, da função de sobrevivência e das funções de incidência acumulada das diferentes causas de falha. Dessa forma, busca-se oferecer uma alternativa à abordagem vertical com cura por mistura, considerando as propriedades de estimação e a interpretação dos componentes do modelo.
+\vspace{-0.2cm}
+\subsection{Motivação}
+As neoplasias malignas dos ossos e das cartilagens articulares constituem um grupo raro e heterogêneo de tumores, que apresenta diferentes características clínicas e prognósticas. Os cânceres ósseos primários representam menos de 0,2\% de todas as neoplasias, destacando-se entre os principais tipos histológicos o osteossarcoma, o condrossarcoma e o sarcoma de Ewing \citep{biermann2025bone}. A ocorrência e a evolução dessas neoplasias variam de acordo com características como o tipo histológico, a localização anatômica e a idade ao diagnóstico, além de aspectos relacionados ao tratamento e à resposta terapêutica.
+
+Na Classificação Internacional de Doenças (CID-10), as neoplasias malignas dos ossos e das cartilagens articulares são classificadas nos códigos C40 e C41. O código C40 corresponde às neoplasias malignas dos ossos e cartilagens articulares dos membros, enquanto o código C41 abrange aquelas localizadas em outras regiões e em localizações não especificadas. Dessa forma, a população definida a partir desses códigos pode reunir tumores que diferem quanto à localização anatômica, distribuição etária e características clínicas \citep{organizaccao1994cid}.
+
+Embora apresentem baixa frequência na população, essas neoplasias podem estar associadas a importante comprometimento da sobrevivência, especialmente em pacientes diagnosticados em estágios mais avançados da doença. O prognóstico pode ser influenciado por características demográficas, clínicas e tumorais observadas no momento do diagnóstico, bem como por aspectos relacionados ao tratamento. Entre os fatores frequentemente investigados, destaca-se a presença de doença metastática, que tem sido associada a menor sobrevivência em diferentes populações de pacientes com câncer ósseo. No estudo de \cite{duchman2015prognostic}, realizado com pacientes com osteossarcoma de alto grau identificados no programa SEER, a presença de metástase ao diagnóstico esteve associada a diferenças importantes na sobrevivência específica por câncer. Além da doença metastática, os autores identificaram associação entre menor sobrevivência específica por câncer e fatores como maior idade, sexo masculino, localização axial do tumor e maior tamanho tumoral.
+
+A influência das características clínicas e do tratamento também pode ser observada em estudos realizados no Brasil. O estudo do \textit{Brazilian Osteosarcoma Treatment Group}, que acompanhou 604 pacientes com menos de 30 anos com osteossarcoma de alto grau, mostrou que a presença de metástases no diagnóstico, a localização do tumor, o tipo de cirurgia e a resposta histológica ao tratamento apresentaram associação com a sobrevivência global e a sobrevivência livre de eventos \citep{petrilli2009fifteen}. Em outro estudo brasileiro, realizado com pacientes com osteossarcoma não metastático e baixa resposta à quimioterapia neoadjuvante, o subtipo histológico e o tamanho tumoral foram associados a diferentes medidas de sobrevivência \citep{bispo2009prognostic}.
+
+
+Estudos realizados com grandes bases de dados também evidenciam a influência de diferentes características clínicas e demográficas na sobrevivência de pacientes com tumores ósseos. Em uma análise de sarcomas localizados em ossos e articulações com 2.794 pacientes utilizando dados do SEER, a idade, sexo, localização tumoral, tipo histológico, grau do tumor, tamanho do tumor, extensão da doença e realização de cirurgia foram identificados como fatores associados ao prognóstico \citep{zhou2023prognostic}. Em pacientes com osteossarcoma de alto grau, \cite{song2018prognostic}, utilizando dados do SEER de 1.990 pacientes diagnosticados entre 1994 e 2013, identificaram idade, sítio primário, tamanho tumoral, realização de cirurgia e extensão da doença como fatores independentemente associados à sobrevida global e à sobrevida específica por câncer. Para o condrossarcoma, \cite{nie2018prognostic} analisaram 3.737 pacientes registrados no SEER entre 1973 e 2012 e encontraram associação entre a sobrevivência e ano do diagnóstico, sexo, idade, estágio tumoral, grau do tumor, sítio tumoral, cirurgia e radioterapia. 
+
+
+A ocorrência de recidiva constitui outro aspecto relevante na evolução dos tumores ósseos. Em pacientes com condrossarcoma, o estudo de \cite{fiorenza2002risk} identificou a recidiva local e espalhamento extracompartimental como fatores associados à sobrevivência, além de características como grau histológico, tamanho tumoral e margens cirúrgicas.  
+
+O tratamento dos tumores ósseos malignos frequentemente envolve uma combinação de diferentes modalidades terapêuticas, como quimioterapia, radioterapia e cirurgia, cuja utilização depende do tipo tumoral, extensão da doença e características clínicas do paciente. Para o osteossarcoma, por exemplo, a abordagem envolve, em muitos casos, cirurgia, enquanto a utilização de quimioterapia depende das características específicas da doença e da possibilidade de controle local \citep{biermann2025bone}. Estudos observacionais também têm incorporado informações sobre esses tratamentos na investigação da sobrevivência, embora a importância de cada modalidade possa variar de acordo com o tipo histológico e o perfil clínico da população estudada. Em um estudo com pacientes com condrossarcoma não metastático, \cite{huang2019identifying} analisaram dados do SEER entre 2005 e 2014 e de uma instituição hospitalar entre 2011 e 2016, contabilizando 1.267 pacientes, identificando a realização de cirurgia, radioterapia, quimioterapia como fatores prognósticos independentes nos modelos de Cox. Além dessas formas de tratamento, também foram identificados os fatores de idade, sexo, tamanho e extensão tumoral, sítio primário, grau histológico e subtipo histológico. De forma semelhante, \cite{hua2020treatment}, em uma análise de 1.128 pacientes com condrossarcoma registrados no SEER entre 2004 e 2016, também observaram a cirurgia, radioterapia e quimioterapia como fatores independentes associados tanto à mortalidade por todas as causas quanto à mortalidade específica por condrossarcoma, além das variáveis idade, sexo, sítio primário, tipo histológico, grau e tamanho tumoral e presença de metástase.
+
+Além das características diretamente relacionadas ao tumor e ao tratamento, variáveis demográficas e assistenciais podem contribuir para a caracterização da população atendida e para a compreensão das diferenças observadas nos desfechos. Idade e sexo são frequentemente incorporados aos modelos prognósticos, enquanto informações referentes ao atendimento permitem caracterizar o contexto em que o diagnóstico e o tratamento são realizados. 
+
+No estado de São Paulo, o Registro Hospitalar de Câncer de São Paulo (RHC/SP), coordenado pela Fundação Oncocentro de São Paulo (FOSP), reúne informações de casos de câncer atendidos em hospitais especializados da rede de atenção oncológica. A base estadual contempla casos diagnosticados desde janeiro de 2000 e é atualizada periodicamente \citep{FOSP2026}.
+
+Diante desse contexto, a análise do tempo até a ocorrência dos eventos de interesse constitui uma abordagem particularmente relevante para o estudo do câncer ósseo, permitindo considerar não apenas se o evento ocorreu, mas também o período de acompanhamento até sua ocorrência. Em estudos de sobrevivência em oncologia, é possível que possam ocorrer diferentes tipos de eventos, podendo impedir a observação do evento de interesse. Em pacientes com câncer, a morte atribuída à doença pode ocorrer em concorrência com a morte por outras causas. Um estudo especificamente voltado à análise de riscos competitivos em pacientes com osteossarcoma mostrou que diferentes causas de morte podem ser consideradas simultaneamente e demonstrou que os métodos convencionais de sobrevivência podem produzir estimativas diferentes daquelas obtidas por abordagens de incidência acumulada quando existem eventos competitivos \citep{tai2001competing}. 
+
+Outra característica relevante para o estudo da sobrevivência em câncer é a possibilidade de existência de um grupo de pacientes que permanece livre do evento relacionado à doença. Em determinadas situações, a curva de sobrevivência pode apresentar um comportamento de estabilização em longo prazo, motivando a utilização de modelos de fração de cura para distinguir a parcela da população curada daquela que permanece suscetível ao evento de interesse \citep{felizzi2021mixture}. Essa abordagem também já foi aplicada especificamente ao osteossarcoma, em uma reanálise do ensaio clínico BO06. Um modelo de cura por mistura foi utilizado para investigar separadamente a fração de pacientes considerados curados e a sobrevivência livre de progressão entre os pacientes não curados, mostrando que a resposta histológica apresentava associação com a fração de cura \citep{musta2022short}. 
+
+Assim, a heterogeneidade clínica das neoplasias ósseas, a presença de fatores associados ao prognóstico, a possibilidade de ocorrência de diferentes causas de falha e a existência de sobreviventes de longo prazo constituem aspectos relevantes para a escolha de métodos estatísticos adequados à investigação da sobrevivência. Nesse contexto, o presente estudo utiliza dados do Registro Hospitalar de Câncer do Estado de São Paulo para investigar a sobrevivência de pacientes com neoplasias malignas dos ossos e cartilagens articulares classificadas nos códigos C40 e C41 da CID-10, considerando características demográficas, clínicas e relacionadas ao tratamento, incluindo idade, sexo, realização de cirurgia, quimioterapia, radioterapia, recidiva da doença, presença de metástase, caráter de atendimento e estágio da doença.
+
+A análise será desenvolvida por meio de uma abordagem de tempo de promoção para fração de cura, incorporada a uma estrutura de modelagem vertical de riscos competitivos. Essa estratégia permite considerar simultaneamente a possibilidade de existência de uma parcela de indivíduos que não apresenta o evento de interesse e a ocorrência de diferentes causas de falha entre os indivíduos suscetíveis. Na modelagem vertical, a estrutura dos riscos competitivos é decomposta de modo a distinguir a ocorrência de uma falha do mecanismo responsável pela sua causa, permitindo uma interpretação mais detalhada da dinâmica da sobrevivência. Essa abordagem foi formalmente desenvolvida para incorporar uma fração de cura à análise de riscos competitivos e constitui uma extensão dos modelos de cura para situações em que diferentes causas podem levar à falha \citep{Nicolaie2019}. Dessa forma, a utilização conjunta do modelo de tempo de promoção e da modelagem vertical possibilita uma caracterização mais abrangente da sobrevivência de pacientes com neoplasias malignas dos ossos e cartilagens articulares, contemplando tanto a heterogeneidade quanto a complexidade dos mecanismos associados à ocorrência dos eventos.
+
+Diante desse contexto, o presente estudo tem como objetivo investigar o tempo até a ocorrência de morte por neoplasias malignas dos ossos e das cartilagens articulares em pacientes registrados no Registro Hospitalar de Câncer do Estado de São Paulo (RHC/SP), no período de 2000 a 2022, considerando a presença de riscos competitivos e a possibilidade de uma fração de cura na população. Especificamente, pretende-se caracterizar a população estudada, realizar uma análise exploratória das principais características demográficas, clínicas e relacionadas ao tratamento, estimar não parametricamente as funções de incidência acumulada para as diferentes causas de morte e, posteriormente, ajustar um modelo de tempo de promoção com fração de cura sob uma abordagem de modelagem vertical para riscos competitivos. Dessa forma, busca-se incorporar simultaneamente a possibilidade de uma parcela da população permanecer livre do evento de interesse e a ocorrência de diferentes causas de falha, permitindo uma caracterização mais adequada da dinâmica de sobrevivência dos pacientes com neoplasias ósseas.
+\vspace{-0.1cm}
+\section{Dados}
+Os dados utilizados são públicos e provenientes do Registro Hospitalar de Câncer do Estado de São Paulo (RHC/SP), coordenado pela  \cite{FOSP2026}. O RHC/SP é um registro hospitalar que reúne casos de câncer atendidos nas instituições participantes do estado de São Paulo.
+
+A base completa disponível para o período estudado continha informações de 1.225.859 observações, correspondentes aos anos de 2000 a 2022. A primeira etapa da seleção consistiu em restringir os registros aos pacientes com câncer ósseo, considerando os códigos C40 e C41 da CID-10, correspondentes às neoplasias malignas dos ossos e das cartilagens articulares. Após esse primeiro filtro, foram identificadas 7.784 observações. Em seguida, foram consideradas apenas os pacientes que apresentavam informação completa para as variáveis selecionadas para a análise. Após essa etapa, a amostra final ficou composta por 2.613 pacientes. O processo de seleção está representado na Figura~\ref{fig:fluxograma}.
+
+% ---------------------------------------------------------------------------
+% Fluxograma
+% ---------------------------------------------------------------------------
+\begin{figure}[H]
+\centering
+
+\begin{tikzpicture}[
+    node distance=0.5cm,
+    box/.style={
+        rectangle,
+        rounded corners,
+        draw=black,
+        align=center,
+        minimum width=10.5cm,
+        minimum height=1.15cm,
+        font=\small
+    },
+    arrow/.style={
+        -{Latex[length=3mm]},
+        thick
+    }
+]
+
+\node[box] (base) {
+    Banco RHC/SP -- FOSP de 2000--2022\\
+    $n=1.225.859$
+};
+
+\node[box, below=of base] (cid) {
+    Seleção de pacientes com câncer ósseo\\
+    CID-10: C40 e C41\\
+    $n=7.784$
+};
+
+\node[box, below=of cid] (complete) {
+    Exclusão de observações com informações ausentes\\
+    nas variáveis selecionadas para o estudo (Tabela~\ref{tab:completude_dados})
+};
+
+\node[box, below=of complete] (final) {
+    \textbf{Amostra  final}\\
+    $n=2.613$ pacientes
+};
+
+\draw[arrow] (base) -- (cid);
+\draw[arrow] (cid) -- (complete);
+\draw[arrow] (complete) -- (final);
+
+\end{tikzpicture}
+
+\caption{Fluxograma de seleção da amostra do estudo.}
+\label{fig:fluxograma}
+
+\end{figure}
+
+Após a aplicação dos critérios de inclusão, foram identificados 7.784 registros elegíveis para avaliação da completude e consistência das informações. A Tabela~\ref{tab:completude_dados} apresenta a distribuição das principais variáveis consideradas nessa etapa. Observa-se que a maior limitação quanto à disponibilidade das informações está relacionada às variáveis referentes ao estágio clínico e à classificação de metástase.
+
+\begin{table}[H]
+\centering
+\caption{Distribuição das variáveis utilizadas na avaliação da completude dos dados antes da análise.}
+\label{tab:completude_dados}
+\begin{tabular}{llcc}
+\toprule
+\textbf{Variável} & \textbf{Categoria} &
+\makecell{\textbf{Frequência}\\\textbf{absoluta}} &
+\makecell{\textbf{Frequência}\\\textbf{relativa (\%)}} \\
+\midrule
+
+\textbf{Status} 
+& Censura & 3689 & 47,4 \\
+& Óbito por neoplasia óssea & 3169 & 40,7 \\
+& Óbito por outras causas & 926 & 11,9 \\
+\midrule
+
+\textbf{Sexo}
+& Masculino & 4421 & 56,8 \\
+& Feminimo & 3363 & 43,2 \\
+\midrule
+
+\textbf{Grupo topográfico}
+& C40 & 4170 & 53,6 \\
+& C41 & 3614 & 46,4 \\
+\midrule
+
+\textbf{Categoria de atendimento}
+& SUS & 6957 & 89,4 \\
+& Convênio/Particular & 827 & 10.6 \\
+\midrule
+
+\textbf{Radioterapia}
+& Com radioterapia & 5857 & 75,2 \\
+& Sem radioterapia & 1927 & 24,8 \\
+\midrule
+
+\textbf{Quimioterapia}
+& Com quimioterapia & 4888 & 62,8 \\
+& Sem quimioterapia & 2896 & 37,2 \\
+\midrule
+
+\textbf{Cirurgia}
+& Com cirurgia & 4514 & 58,0 \\
+& Sem cirurgia & 3270 & 42,0 \\
+\midrule
+
+\textbf{Recidiva}
+& Com recidiva & 6427 & 82,6 \\
+& Sem recidiva & 1357 & 17,4 \\
+\midrule
+
+\textbf{Perda de seguimento}
+& Sem perda de seguimento & 6661 & 85,6 \\
+& Com perda de seguimento & 1123 & 14,4 \\
+\midrule
+
+\textbf{Estágio clínico}
+& I & 875 & 11,2 \\
+& II & 767 & 9,9 \\
+& III & 234 & 3,0 \\
+& IV & 759 & 9,8 \\
+& \text{X/Y (faltante)} & 5149 & 66,1 \\
+\midrule
+
+\textbf{Metástase}
+& Sem metástase & 1911 & 24,6 \\
+& Com metástase & 702 & 9.0 \\
+& \text{X/Y (faltante)} & 5171 & 66,4 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+Na variável de estágio clínico, 5.149 registros (66,1\%) apresentavam informação faltante, enquanto, para a variável de metástase, foram identificados 5.171 registros (66,4\%) nessa condição. Considerou-se informação faltante as categorias X e Y no banco de dados, referentes a ``Sem informação'' e ``Não se aplica'', respectivamente, segundo o dicionário de dados do RHC/SP \citep{FOSPDicionario}. Após a aplicação desse procedimento, a amostra final foi composta por 2.613 indivíduos com informações completas para as variáveis consideradas na análise.
+
+A variável idade foi mantida em sua escala original, sem categorização, para preservar a informação disponível e evitar perda de variabilidade. Valores iguais a zero foram considerados válidos, correspondendo a pacientes com menos de um ano de idade. Não foram identificados valores negativos de idade na base analisada.
+
+
+
+% =============================================================================
+\subsection{Definição do tempo, evento e censura}
+
+O tempo de acompanhamento será definido como o período, em dias, entre a data do diagnóstico do tumor e a data da última informação disponível sobre o paciente. Esse intervalo representa o tempo observado para cada indivíduo até a ocorrência de um evento de interesse ou até o encerramento do acompanhamento, conforme a situação registrada no banco de dados.
+
+Serão considerados dois tipos de falha no estudo. A primeira corresponde à morte por câncer ósseo, definida como o evento de interesse. A segunda corresponde à morte por outras causas, que será considerada como causa competitiva. A presença de riscos competitivos é relevante nesse contexto porque a ocorrência de uma das causas de morte impede a ocorrência posterior da outra. Assim, um paciente que falece por uma causa diferente do câncer ósseo deixa de estar sob risco de morrer posteriormente em decorrência do câncer ósseo, e vice-versa.
+
+Em relação à censura, serão considerados os pacientes que não apresentarem nenhum dos eventos de interesse durante o período observado. Nesse caso, o acompanhamento é encerrado sem que tenha sido observada a ocorrência da falha, caracterizando uma observação censurada à direita. No banco de dados, essa situação inclui, principalmente, os pacientes que permanecem vivos até a última data de acompanhamento disponível. Além disso, o banco apresenta a variável \textit{PERDASEG}, que identifica a ocorrência de perda de seguimento durante o período de acompanhamento. Quando ocorre perda de seguimento antes da observação de um dos eventos de interesse, o tempo até a última informação disponível será considerado como o tempo observado, caracterizando como censura aleatória.
+
+Dessa forma, os pacientes poderão apresentar uma das duas causas de falha ou permanecer censurados ao final do período observado. A censura será considerada não informativa, assumindo-se que, condicionalmente às covariáveis incluídas nos modelos, a ocorrência da censura não esteja associada ao risco de ocorrência dos eventos de interesse, dado a inclusão de fração de cura e riscos competitivos no modelo. Essa suposição é necessária para a aplicação dos métodos de análise de sobrevivência empregados no estudo.
+
+
+\subsection{Covariáveis selecionadas}
+
+Para a primeira etapa da análise, foram selecionadas variáveis demográficas, clínicas, relacionadas à localização e ao estadiamento do tumor, ao tratamento e ao acompanhamento do paciente. A seleção dessas variáveis teve como objetivo caracterizar a população estudada e identificar possíveis fatores associados ao tempo até a ocorrência dos eventos de interesse. 
+
+Nesta seleção, foram desconsideradas as variáveis que apresentavam alta porcentagem de informações faltantes, para que não houvesse redução substancial do número de indivíduos no banco de dados para as análises.
+
+As variáveis categóricas serão analisadas de acordo com as categorias apresentadas na Tabela~\ref{tab:variaveis}, mantendo-se a codificação estabelecida no banco de dados ou a recodificação previamente definida para a análise. Para as variáveis quantitativas, serão inicialmente avaliadas medidas de tendência central e dispersão, além da distribuição dos valores observados. 
+
+
+\begin{table}[H]
+\centering
+\small
+\caption{Variáveis selecionadas para a análise.}
+\label{tab:variaveis}
+\begin{tabularx}{\textwidth}{
+    >{\ttfamily}l
+    >{\raggedright\arraybackslash}X
+    >{\raggedright\arraybackslash}X
+}
+\toprule
+\textnormal{Variável} & \textnormal{Descrição e finalidade na análise} & \textnormal{Classificação} \\
+\midrule
+TEMPO &
+Tempo em dias desde o diagnóstico até a última informação sobre o paciente, sendo o tempo até o
+evento ou censura. & Quantitativa: Medido em dias. \\
+
+STATUS &
+Situação do paciente no estudo, podendo ser censura,
+morte por câncer ósseo ou morte por outras causas. & Categórica: 1 = Morte por câncer de osso, \newline 2 = Censura, 3 = Morte por outras causas.\\
+
+ANO &
+Ano do diagnóstico. & Quantitativa. \\
+
+IDADE &
+Idade do paciente no momento do diagnóstico. & Quantitativa. \\
+
+SEXO &
+Sexo do paciente. & Categórica: 0 = Masculino, 1 = Feminino.  \\
+
+CATEATEND &
+Categoria de atendimento no momento do diagnóstico, relacionada ao tipo de
+atendimento. &  Categórica: 0 = Convênio/Particular,\newline 1 = SUS. \\
+
+RADIO &
+Indicador de realização de radioterapia no hospital. & Categórica: 0 = Não realizou radioterapia, \newline1 = Realizou radioterapia. \\
+
+QUIMIO &
+Indicador de realização de quimioterapia no hospital. & Categórica: 0 = Não realizou quimioterapia,\newline 1 = Realizou quimioterapia. \\
+
+CIRURGIA &
+Indicador de realização de cirurgia no hospital. & Categórica: 0 = Não realizou cirurgia,\newline 1 = Realizou cirurgia. \\
+
+RECNENHUM &
+Indicador relacionado à ausência de recidiva registrada durante o seguimento. & Categórica: 0 = Sem recidiva da doença, \newline1 = Com recidiva da doença. \\
+
+ECGRUP &
+Grupo do estadiamento clínico, utilizado para representar a extensão da doença
+no momento do diagnóstico. & Categórica: Grupos I, II/III e IV.\\
+
+M &
+Categoria M do sistema TNM, relacionada à presença ou ausência de metástase. & Categórica: 0 = Ausência de metástase, \newline1 = Presença de metástase. \\
+
+
+\bottomrule
+\end{tabularx}
+\end{table}
+
+As definições utilizadas são baseadas no dicionário de dados do RHC/SP \citep{FOSPDicionario}.
+
+Considerando a presença de dois tipos de falha, a análise irá distinguir a ocorrência da morte por câncer ósseo da morte por outras causas. Essa estrutura permitirá avaliar não apenas o tempo até a ocorrência do evento de interesse, mas também a influência das características dos pacientes e da doença sobre os diferentes componentes do processo de sobrevivência. Além disso, a abordagem de fração de cura permitirá investigar a possibilidade de existência de um grupo de pacientes que, após determinado período de acompanhamento, apresente comportamento distinto daquele observado entre os pacientes suscetíveis à ocorrência do evento.
+
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\section{Métodos}
+\subsection{Análise descritiva}
+
+A Tabela~\ref{tab:descritiva_categorica} apresenta informações sobre as variáveis explicativas categóricas consideradas no estudo. 
+
+% \begin{figure}[H]
+%     \centering
+%     \includegraphics[width=1\linewidth]{images/descritiva_categoricas.pdf}
+%     \caption{Caption}
+%     \label{fig:descritiva_categoricas}
+% \end{figure}
+\begin{table}[H]
+\centering
+\caption{Distribuição das características dos pacientes.}
+\label{tab:descritiva_categorica}
+\begin{tabular}{llrr}
+\toprule
+\textbf{Variável} & \textbf{Categoria} & \textbf{n} & \textbf{(\%)} \\
+\midrule
+
+\multirow{2}{*}{Sexo}
+& Feminino  & 1146 & 43,9 \\
+& Masculino & 1467 & 56,1 \\
+
+\multirow{2}{*}{Convênio}
+& Convênio/Particular & 320  & 12,2 \\
+& SUS                & 2293 & 87,8 \\[2pt]
+
+\multirow{3}{*}{Estadiamento (EC)}
+& I      & 875 & 33,5 \\
+& II/III & 981 & 37,5 \\
+& IV     & 757 & 29,0 \\[2pt]
+
+\multirow{2}{*}{Metástase}
+& Ausência de metástase & 1911 & 73,1 \\
+& Presença de metástase & 702  & 26,9 \\[2pt]
+
+\multirow{2}{*}{Recidiva}
+& Com recidiva & 2055 & 78,6 \\
+& Sem recidiva & 558  & 21,4 \\[2pt]
+
+\multirow{2}{*}{Quimioterapia}
+& Com quimioterapia & 1753 & 67,1 \\
+& Sem quimioterapia & 860  & 32,9 \\[2pt]
+
+\multirow{2}{*}{Radioterapia}
+& Com radioterapia & 448  & 17,1 \\
+& Sem radioterapia & 2165 & 82,9 \\[2pt]
+
+\multirow{2}{*}{Cirurgia}
+& Com cirurgia & 1920 & 73,5 \\
+& Sem cirurgia & 693  & 26,5 \\[2pt]
+
+
+\bottomrule
+\end{tabular}
+\end{table}
+
+Observou-se uma distribuição relativamente equilibrada em relação a variável sexo, com predominância do sexo masculino, que correspondeu a 56,1\% dos pacientes, enquanto 43,9\% eram do sexo feminino. Quanto a variável caráter de atendimento, viu-se que mais pacientes fora, atendidos pelo Sistema Único de Saúde (SUS), correspondendo a 87,8\%, do que pacientes atendidos por meio de convênio ou particular, sendo 12,2\%. 
+
+Quanto ao estadiamento clínico, a maior proporção dos pacientes foi classificada nos grupos II/III, correspondendo a 37,5\%, seguida pelo grupo I, com 33,5\%, e pelo grupo IV, com 29,0\%. Além disso, 73,1\% dos pacientes não apresentavam metástase registrada, enquanto 26,9\% apresentavam metástase. Além disso, 78,6\% dos pacientes apresentaram registro de recidiva, enquanto 21,4\% não apresentaram recidiva registrada. 
+
+Em relação aos tratamentos, 67,1\% dos pacientes apresentaram registro de realização de quimioterapia, enquanto apenas 17,1\% de radioterapia. Assim, a quimioterapia foi registrada para uma parcela substancialmente maior de pacientes, enquanto a radioterapia foi menos frequente, com 82,9\% dos pacientes sem registro desse tratamento. Em relação ao tratamento cirúrgico, 73,5\% dos pacientes foram submetidos à cirurgia, enquanto 26,5\% não apresentaram registro de realização desse procedimento.
+
+A Figura \ref{fig:descritiva_quantitativas} apresenta a distribuição das variáveis quantitativas do estudo, sendo idade, medida em anos, e tempo de acompanhamento, medido em dias, por meio de histogramas e boxplots. As medidas em azul indicam a média, enquanto as de vermelho indicam a mediana de cada variável, permitindo avaliar tanto a tendência central quanto a assimetria das distribuições.
+
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=1\linewidth]{images/descritiva_quantitativas.pdf}
+    \caption{Distribuição das variáveis quantitativas idade e tempo de acompanhamento dos pacientes.}
+    \label{fig:descritiva_quantitativas}
+\end{figure}
+
+Em relação à idade, observa-se uma distribuição assimétrica à direita, com maior concentração de pacientes nas idades mais jovens e redução progressiva da frequência à medida que a idade aumenta. A maior concentração das observações ocorre aproximadamente entre 10 e 30 anos, embora sejam observados pacientes em uma faixa etária mais ampla, chegando ao valor máximo de 90 anos, como pode ser visto na Tabela \ref{tab:estatisticas_quantitativas}. A média encontra-se acima da mediana, indicando influência dos pacientes de maior idade sobre a média e reforçando a presença de assimetria positiva. No boxplot, observa-se também uma amplitude considerável dos valores, com mais pacientes concentrados em idades mais baixas.
+
+\begin{table}[H]
+\centering
+\caption{Estatísticas descritivas das variáveis quantitativas do banco de câncer ósseo.}
+\label{tab:estatisticas_quantitativas}
+
+\begin{adjustbox}{max width=\textwidth}
+\begin{tabular}{lrrrrrrrr}
+\toprule
+\textbf{Variável} & \textbf{n} & \textbf{Média} & \textbf{Mediana} & 
+\textbf{Desvio-padrão} & \textbf{Mínimo} & \textbf{1º Quartil} & 
+\textbf{3º Quartil} & \textbf{Máximo} \\
+\midrule
+Idade & 2613 & 29,00 & 22,00 & 18,80 & 0,00 & 15,00 & 42,00 & 90,00 \\
+Tempo de \\ acompanhamento & 2613 & 2089,00 & 1219,00 & 2162,00 & 1,00 & 467,00 & 3088,00 & 9480,00 \\
+\bottomrule
+\end{tabular}
+\end{adjustbox}
+
+\end{table}
+
+A mediana da idade é de 22 anos, enquanto a média é de 29 anos. A diferença entre essas duas medidas é consistente com a assimetria observada no histograma. A idade igual a zero foi considerada válida, correspondendo a pacientes com menos de um ano de idade.
+
+Para o tempo de acompanhamento, também se observa uma distribuição fortemente assimétrica à direita. Há maior concentração de pacientes nos menores tempos de acompanhamento, com redução gradual da frequência à medida que o tempo aumenta. Embora a maior parte das observações esteja concentrada até 2.000 dias, são observados acompanhamentos bastante longos, alcançando aproximadamente 10.000 dias. Esse comportamento produz uma cauda direita extensa, evidenciada tanto pelo histograma quanto pelo boxplot.
+
+A mediana do tempo de acompanhamento é de 1.219 dias, enquanto a média é de 2.089 dias. Assim como observado para a idade, a média é superior à mediana, indicando que os tempos de acompanhamento mais longos exercem influência sobre a média. A diferença entre essas duas medidas evidencia a assimetria positiva da distribuição. O boxplot reforça esse comportamento, apresentando uma maior extensão da distribuição em direção aos valores elevados de tempo.
+
+
+%%%%%%%%%%%%%%%%%%%%%%55
+
+A Figura \ref{fig:descritiva_status} apresenta a distribuição dos pacientes segundo o status observado ao final do acompanhamento, juntamente com a distribuição do tempo de acompanhamento para cada tipo de desfecho. A população estudada foi composta por 2.613 pacientes, dos quais 1.232 (47,1\%) foram censurados, 1.132 (43,3\%) apresentaram morte por câncer ósseo e 249 (9,5\%) apresentaram morte por outras causas. Essa distribuição evidencia que os dois tipos de morte estão presentes na população e que a morte por outras causas não deve ser tratada simplesmente como censura, uma vez que sua ocorrência impede que o paciente venha a apresentar posteriormente a morte por câncer ósseo. Assim, esse desfecho será considerado como causa competitiva na análise de sobrevivência.
+
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=1\linewidth]{images/descritiva_status.pdf}
+    \caption{Distribuição dos pacientes segundo o status do acompanhamento.}
+    \label{fig:descritiva_status}
+\end{figure}
+
+A distribuição do tempo de acompanhamento também apresenta diferenças entre os três grupos. Entre os pacientes censurados, observa-se maior dispersão dos tempos de acompanhamento, com mediana próxima de 2.900 dias e valores que se estendem até aproximadamente 9.500 dias. A média, representada pelo marcador correspondente no gráfico, encontra-se acima da mediana, indicando assimetria à direita. Esse comportamento está associado à presença de pacientes com períodos de acompanhamento consideravelmente mais longos.
+
+Entre os pacientes que apresentaram morte por câncer ósseo, os tempos de acompanhamento são, em geral, menores. A mediana encontra-se próxima de 500 dias, enquanto a média é um pouco superior, em torno de 700 dias. A distribuição apresenta concentração nos menores tempos de acompanhamento e uma cauda em direção a períodos mais longos, com valores chegando aproximadamente a 2.000 dias. Esse padrão é compatível com a ocorrência do evento de interesse em períodos relativamente mais precoces para uma parcela considerável dos pacientes.
+
+Para os pacientes que apresentaram morte por outras causas, observa-se uma distribuição intermediária em relação aos dois grupos anteriores. A mediana do tempo de acompanhamento situa-se aproximadamente em 1.200 dias, enquanto a média está próxima de 1.900 dias. A distribuição apresenta maior dispersão que aquela observada entre os pacientes que morreram por câncer ósseo, com alguns indivíduos apresentando períodos de acompanhamento superiores a 5.000 dias.
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%55
+A Figura \ref{fig:descritiva_ano} apresenta a distribuição dos pacientes segundo o ano do diagnóstico, considerando tanto o número total de pacientes registrados em cada ano quanto a distribuição dos desfechos observados durante o acompanhamento. O período analisado compreende os anos de 2000 a 2022.
+
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=1\linewidth]{images/descritiva_ano.pdf}
+    \caption{Distribuição dos pacientes segundo o ano do diagnóstico e o status do acompanhamento.}
+    \label{fig:descritiva_ano}
+\end{figure}
+
+No painel referente ao número total de pacientes, observa-se uma variação na quantidade de diagnósticos ao longo do período. Entre 2000 e 2010, o número de pacientes apresentou comportamento relativamente estável, com valores predominantemente inferiores a 100 pacientes por ano. No ano de 2013, observa-se o maior crescimento no número de pacientes registrados, atingindo o máximo de 166 pacientes. Nos anos seguintes, houve redução gradual, embora permanecendo em níveis superiores aos observados no início do período. 
+
+
+No painel que apresenta os desfechos segundo o ano do diagnóstico, observa-se comportamento distinto entre as três categorias. A morte por câncer ósseo apresenta frequência relativamente elevada ao longo de grande parte do período, com oscilações entre os anos. Nos primeiros anos, observa-se uma frequência de aproximadamente 40 a 50 mortes anuais, com alguns aumentos pontuais, como em 2001 e 2005. A partir de 2011, há um aumento mais expressivo, atingindo aproximadamente 70 mortes, seguido por valores elevados nos anos subsequentes. Após esse período, observa-se uma redução gradual na frequência absoluta de mortes por câncer ósseo, chegando a aproximadamente 32 casos em 2022.
+
+A censura apresenta comportamento semelhante ao observado para o número total de pacientes, uma vez que constitui uma parcela importante da população em todos os anos. Nos primeiros anos, apresenta frequências relativamente baixas, mas aumenta a partir de 2011, atingindo valores superiores a 60 pacientes em alguns anos e chegando a aproximadamente 80 pacientes em 2013 e 2021. A morte por outras causas, por sua vez, apresenta as menores frequências anuais entre os três desfechos. Sua ocorrência varia pouco ao longo do período, geralmente permanecendo abaixo de 20 pacientes por ano. 
+
+De maneira geral, a distribuição temporal mostra que os pacientes não estão igualmente distribuídos entre os anos de diagnóstico e que a frequência dos diferentes desfechos também varia ao longo do período. 
+
+%%%%%%%%%%%%%%%%%%%%%
+
+A Figura \ref{fig:fia_inicial} apresenta as estimativas das funções de incidência acumulada para os dois tipos de evento considerados no estudo: morte por câncer e morte por outras causas. Observa-se que a incidência acumulada de morte por câncer apresenta crescimento mais acentuado nos primeiros anos de acompanhamento, estabilizando-se em torno de 0,45 ao final do período observado. Para a morte por outras causas, a incidência acumulada apresenta crescimento mais gradual, atingindo aproximadamente 0,20 ao final do acompanhamento. O aumento mais acentuado da FIA de morte por câncer nos primeiros anos indica que uma parte importante desses óbitos ocorre já no início do acompanhamento.
+
+
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.55\linewidth]{images/fia_inicial.pdf}
+    \caption{Estimativas das funções de incidência acumulada para morte por câncer e morte por outras causas em pacientes com câncer ósseo.}
+    \label{fig:fia_inicial}
+\end{figure}
+
+
+
+A tendência de estabilização das curvas em períodos mais longos também é relevante no contexto de modelos com fração de cura, pois indica que, após determinado período, o acréscimo na incidência acumulada dos eventos torna-se relativamente pequeno. A soma das incidências acumuladas das duas causas ao final do gráfico é inferior a 1, refletindo a existência de indivíduos que permanecem vivos e livres dos eventos observados ao final do acompanhamento. Esse comportamento é compatível com a necessidade de considerar uma parcela da população que não experimentará o evento de interesse.
+
+%%%%%%%%%%%%
+
+A Figura \ref{fig:fia_graf_cov_1} apresenta as funções de incidência acumulada segundo sexo e caráter de atendimento.
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.9\linewidth]{images/fia_graf_cov_1.pdf}
+    \caption{Estimativas das funções de incidência acumulada para morte por câncer e morte por outras causas segundo sexo e caráter de atendimento.}
+    \label{fig:fia_graf_cov_1}
+\end{figure}
+
+Quanto ao sexo, observa-se uma diferença sutil entre homens e mulheres na incidência acumulada de morte por câncer. A curva correspondente ao sexo masculino apresenta crescimento mais rápido e permanece acima da curva feminina durante praticamente todo o período de acompanhamento, atingindo, ao final, uma incidência acumulada próxima de 0,51, enquanto a observada para o sexo feminino se aproxima de 0,46. 
+
+Para a morte por outras causas, as curvas segundo sexo apresentam comportamento bastante semelhante durante grande parte do acompanhamento. Entretanto, em períodos mais longos, observa-se maior incidência acumulada entre as mulheres, com a curva feminina atingindo aproximadamente 0,20, enquanto a masculina permanece próxima de 0,16. Assim, o padrão observado para a morte por outras causas não acompanha a diferença observada para a morte por câncer.
+
+Em relação ao caráter de atendimento, observa-se uma diferença mais acentuada para a morte por câncer. Os indivíduos atendidos pelo SUS apresentam uma incidência acumulada consideravelmente maior, com a curva atingindo aproximadamente 0,52 ao final do acompanhamento, enquanto a incidência acumulada entre aqueles classificados como convênio/particular permanece próxima de 0,30. Além disso, a separação entre as curvas ocorre principalmente nos primeiros anos de acompanhamento, período em que a FIA do grupo SUS apresenta crescimento bastante mais rápido.
+
+Para a morte por outras causas, se observa maior incidência acumulada no grupo convênio/particular nos períodos mais longos. A curva desse grupo alcança aproximadamente 0,20, enquanto a do grupo SUS permanece em torno de 0,17. No início do acompanhamento, entretanto, as curvas apresentam comportamento bastante semelhante, com diferenças mais evidentes somente em períodos posteriores. Essas diferenças não devem ser interpretadas diretamente como efeito do tipo de atendimento sobre a mortalidade, uma vez que a variável pode estar associada a características clínicas, socioeconômicas, estágio da doença e outras características dos pacientes.
+
+%%%%%%%%%%%%%%%%%
+A Figura \ref{fig:fia_graf_cov_2} apresenta as estimativas das funções de incidência acumulada segundo a realização de radioterapia, quimioterapia e cirurgia, considerando separadamente os óbitos por câncer e por outras causas.
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.9\linewidth]{images/fia_graf_cov_2.pdf}
+    \caption{Estimativas das funções de incidência acumulada para morte por câncer e morte por outras causas segundo realização de radioterapia, quimioterapia e cirurgia.}
+    \label{fig:fia_graf_cov_2}
+\end{figure}
+
+Para a radioterapia, observa-se uma diferença acentuada entre os grupos quanto à morte por câncer. Os indivíduos que realizaram radioterapia apresentam uma FIA substancialmente superior à daqueles que não realizaram o tratamento, alcançando aproximadamente 0,63 ao final do acompanhamento, enquanto o grupo sem radioterapia apresenta incidência acumulada próxima de 0,46. A diferença surge principalmente nos primeiros anos, com crescimento mais rápido da incidência acumulada no grupo que realizou radioterapia. Para a morte por outras causas, entretanto, as duas curvas permanecem próximas durante grande parte do acompanhamento. Em períodos mais longos, a incidência acumulada no grupo sem radioterapia torna-se ligeiramente superior.
+
+Para a quimioterapia, observa-se padrão semelhante ao encontrado para a radioterapia em relação à morte por câncer. A incidência acumulada é consideravelmente maior entre os indivíduos que realizaram quimioterapia, atingindo aproximadamente 0,58 ao final do acompanhamento, enquanto o grupo sem quimioterapia apresenta valor próximo de 0,29. A diferença entre as curvas é especialmente pronunciada nos primeiros anos de seguimento. Para a morte por outras causas, o comportamento é distinto. A FIA do grupo sem quimioterapia permanece acima daquela observada entre os indivíduos que realizaram quimioterapia durante grande parte do acompanhamento. Portanto, a separação entre os grupos ocorre em sentidos opostos para as duas causas de morte.
+
+No caso da cirurgia, observa-se novamente uma diferença importante para a morte por câncer, mas contrário ao visto nos dois tratamentos anteriores. O grupo sem cirurgia apresenta incidência acumulada superior, atingindo aproximadamente 0,66, enquanto o grupo que realizou cirurgia apresenta valor próximo de 0,43. Para a morte por outras causas, as curvas referentes à realização ou não de cirurgia são bastante próximas. Inicialmente, o grupo sem cirurgia apresenta incidência acumulada levemente superior. Posteriormente, as curvas se aproximam e se cruzam, e, ao final do acompanhamento, o grupo com cirurgia apresenta uma incidência acumulada um pouco maior.
+
+%%%%%%%%%%%%%%%%%%%%%%%%5
+
+A Figura \ref{fig:fia_graf_cov_3} apresenta as funções de incidência acumulada segundo características relacionadas à progressão e à extensão da doença: recidiva do câncer, estágio tumoral e presença de metástase.
+
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.9\linewidth]{images/fia_graf_cov_3.pdf}
+    \caption{Estimativas das funções de incidência acumulada para morte por câncer e morte por outras causas segundo recidiva, estágio tumoral e presença de metástase.}
+    \label{fig:fia_graf_cov_3}
+\end{figure}
+
+Em relação à recidiva, observa-se uma diferença bastante marcada na incidência acumulada de morte por câncer. Primeiramente, os pacientes com recidiva apresentam um crescimento mais acentuado da FIA, sendo ultrapassados pela FIA dos pacientes sem recidiva da doença após aproximadamente 1000 dias. Esse padrão indica uma maior ocorrência acumulada de morte por câncer entre os indivíduos que não apresentaram recidiva, após o período inicial do estudo. Para a morte por outras causas, as curvas são muito próximas durante boa parte do acompanhamento. Nos períodos finais, a incidência acumulada entre os indivíduos sem recidiva atinge aproximadamente 0,18, enquanto aquela observada para os indivíduos com recidiva permanece próxima de 0,15. 
+
+Quanto ao estágio tumoral, observa-se um gradiente bastante evidente para a morte por câncer. Os indivíduos classificados no estágio IV apresentam a maior incidência acumulada, com crescimento particularmente rápido nos primeiros anos e estabilização próxima de 0,78 ao final do acompanhamento. O grupo classificado nos estágios II/III apresenta comportamento intermediário, alcançando aproximadamente 0,47, enquanto o grupo I apresenta valor próximo de 0,22. A separação entre as curvas é observada desde o início do acompanhamento e permanece ao longo do período analisado. Para a morte por outras causas, entretanto, o comportamento é diferente. O grupo correspondente ao estágio I apresenta incidência acumulada ligeiramente superior nos períodos mais longos, alcançando aproximadamente 0,25, seguido pelo grupo II/III, com aproximadamente 0,20. O grupo IV apresenta uma FIA consideravelmente menor e praticamente estabilizada em torno de 0,07. 
+
+Por fim, para a variável metástase, observa-se uma diferença expressiva para a morte por câncer. Os indivíduos classificados com presença de metástase apresentam uma incidência acumulada próxima de 0,77, enquanto aqueles com ausência de metástase apresentam valor próximo de 0,38 ao final do acompanhamento. A curva do grupo com metástase apresenta crescimento particularmente rápido nos primeiros anos e permanece acima da curva do grupo sem metástase durante todo o acompanhamento. Para a morte por outras causas, a diferença é menos pronunciada, embora o grupo sem a presença de metástase apresente uma incidência acumulada maior nos períodos mais longos, próxima de 0,22, enquanto o grupo com metástase permanece próximo de 0,08.
+
+Para complementar essa avaliação gráfica, foram realizados testes de comparação de grupos por meio do teste de Gray \citep{gray1988}, que constitui um teste não paramétrico específico para a comparação das funções de incidência acumulada de uma determinada causa de falha entre diferentes grupos. Diferentemente do teste de log-rank, o teste de Gray incorpora a ocorrência dos eventos competitivos na comparação, permitindo avaliar diretamente se a incidência acumulada do evento de interesse difere entre os grupos \citep{pintilie2006competing}. Para uma determinada causa $j$, as hipóteses do teste são dadas por:
+\begin{equation*}
+\begin{cases}
+H_0: F_{j1}(t) = F_{j2}(t) = \cdots = F_{jg}(t),
+& \text{para todo } t \in [0,\tau], \\[6pt]
+H_1: F_{jk}(t) \neq F_{jl}(t),
+& \text{para algum } t \in [0,\tau]
+\text{ e algum } k \neq l,
+\end{cases}
+\end{equation*}
+
+\noindent em que $F_{jk}(t)$ representa a função de incidência acumulada da causa $j$ no grupo $k$, $g$ é o número de grupos comparados e $\tau$ representa o maior tempo de acompanhamento considerado na análise. Assim, a hipótese nula estabelece que as funções de incidência acumulada da causa de interesse são iguais entre os grupos durante o período de acompanhamento, enquanto a hipótese alternativa indica que pelo menos uma das funções difere entre os grupos.
+
+
+Para a variável estágio tumoral, que possui três categorias de estadiamento, inicialmente foi realizado o teste global de Gray. Na presença de evidência de diferença entre as funções de incidência acumulada, foram realizadas comparações par a par entre os grupos, também por meio do teste de Gray. Como essas comparações envolvem múltiplos testes de hipóteses, os respectivos valores de $p$ foram  ajustados pelo procedimento de Holm, com o objetivo de controlar a taxa de erro do conjunto de comparações. Os resultados das comparações são apresentados na Tabela~\ref{tab:gray_pairwise}.
+
+\begin{table}[H]
+\centering
+\caption{Comparações 2x2 das funções de incidência acumulada segundo as variáveis explicativas, pelo teste de Gray, com ajuste de Holm para múltiplas comparações.}
+\label{tab:gray_pairwise}
+\resizebox{\textwidth}{!}{
+\begin{tabular}{llrrrr}
+\toprule
+\textbf{Variável} & \textbf{Comparação} &
+\multicolumn{2}{c}{\textbf{Causa 1}} &
+\multicolumn{2}{c}{\textbf{Causa 2}} \\
+\cmidrule(lr){3-4}
+\cmidrule(lr){5-6}
+& & \textbf{$p$} & \textbf{$p_{\mathrm{Holm}}$} &
+\textbf{$p$} & \textbf{$p_{\mathrm{Holm}}$} \\
+\midrule
+
+Sexo
+& Feminino $\times$ Masculino
+& 0,0118 & -
+& 0,5710 & - \\
+
+\midrule
+
+Categoria de atendimento
+& Convênio/Particular $\times$ SUS
+& $<0,0001$ & -
+& 0,4700 & - \\
+
+\midrule
+
+Radioterapia
+& Com $\times$ Sem
+& $<0,0001$ & -
+& 0,5213 & - \\
+
+\midrule
+
+Quimioterapia
+& Com $\times$ Sem
+& $<0,0001$ & -
+& $<0,0001$ & - \\
+
+\midrule
+
+Cirurgia
+& Com $\times$ Sem
+& $<0,0001$ & -
+& 0,6231 & - \\
+
+\midrule
+
+Recidiva
+& Com $\times$ Sem
+& $<0,0001$ & -
+& 0,8609 & - \\
+
+\midrule
+
+Metástase
+& Ausência $\times$ Presença
+& $<0,0001$ & -
+& 0,0057 & - \\
+
+\midrule
+
+Estágio clínico & Global & $<0,0001$ & - & 0,0028 &- \\
+
+& I $\times$ II/III
+& $<0,0001$ & $<0,0001$
+& 0,3161 & 0,3161 \\
+
+& I $\times$ IV
+& $<0,0001$ & $<0,0001$
+& 0,0007 & 0,0020 \\
+
+& II/III $\times$ IV
+& $<0,0001$ & $<0,0001$
+& 0,0148 & 0,0296 \\
+
+\bottomrule
+\end{tabular}
+}
+\vspace{0.2cm}
+
+\begin{minipage}{0.95\textwidth}
+\footnotesize
+\textit{Nota:} A causa 1 corresponde ao óbito por câncer e a causa 2 corresponde ao óbito por outras causas. Os valores de $p$ foram obtidos pelo teste de Gray. Para a variável estágio clínico, o ajuste de Holm foi realizado separadamente para as três comparações par a par dentro de cada causa. 
+\end{minipage}
+
+\end{table}
+
+Os resultados apresentados na Tabela~\ref{tab:gray_pairwise} são, de modo geral, consistentes com os padrões observados nos gráficos das funções de incidência acumulada. Para a causa 1, correspondente ao óbito por câncer, foram observadas diferenças estatisticamente significativas entre os grupos para todas as variáveis analisadas. No caso do sexo, por exemplo, a FIA de óbito por câncer foi superior entre os homens ao longo do período de acompanhamento, e o teste de Gray confirmou diferença estatisticamente significativa entre as curvas ($p=0,0118$). De forma semelhante, as diferenças visualizadas nos gráficos segundo categoria de atendimento, realização de radioterapia, quimioterapia, cirurgia, ocorrência de recidiva e categoria M também foram acompanhadas por valores de $p$ inferiores a 0,05.
+
+Para a causa 2, correspondente ao óbito por outras causas, os resultados foram menos uniformes. Não foram observadas diferenças estatisticamente significativas segundo sexo ($p=0,5710$), categoria de atendimento ($p=0,4700$), radioterapia ($p=0,5213$), cirurgia ($p=0,6231$) ou recidiva ($p=0,8609$), ao nível de confiança de 5\%. Esses resultados são compatíveis com a proximidade entre as respectivas FIA observada nos gráficos. Por outro lado, foram identificadas diferenças estatisticamente significativas segundo a realização de quimioterapia ($p<0,0001$) e a presença de metástase ($p=0,0057$).
+
+Para o estágio clínico, o teste global de Gray indicou diferenças entre as categorias tanto para a causa 1 ($p<0,0001$) quanto para a causa 2 ($p=0,0028$). As comparações par a par mostraram que, para a causa 1, todas as categorias diferiram entre si após o ajuste de Holm ($p<0,0001$ em todas as comparações). Esse resultado acompanha o padrão observado nos gráficos, nos quais a FIA de óbito por câncer aumenta progressivamente das categorias I para II/III e IV. Para a causa 2, entretanto, a comparação entre I e II/III não permaneceu estatisticamente significativa após o ajuste ($p_{\mathrm{Holm}}=0,3161$), enquanto foram observadas diferenças entre I e IV ($p_{\mathrm{Holm}}=0,0020$) e entre II/III e IV ($p_{\mathrm{Holm}}=0,0296$), ao nível de confiança de 5\%. Assim, embora o teste global indique diferenças entre os estágios, os resultados par a par mostram que essas diferenças estão concentradas na comparação da causa 2 entre as categorias II/III e IV.
+
+De maneira geral, os resultados dos testes de Gray corroboram a interpretação visual fornecida pelas FIA, permitindo formalizar estatisticamente as diferenças observadas entre os grupos. A utilização do teste específico para riscos competitivos é particularmente importante neste contexto, pois a incidência acumulada de uma causa depende não apenas da ocorrência do próprio evento, mas também da ocorrência dos demais eventos competitivos ao longo do acompanhamento.
+
+\subsection{Modelagem em estudo}
+
+A análise convencional de sobrevivência considera um único tipo de evento e interpreta todos os indivíduos censurados como se fossem potencialmente capazes de apresentar o evento de interesse no futuro.
+
+Em situações nas quais existe uma fração de indivíduos que apresenta sobrevivência de longo prazo, essa hipótese pode ser inadequada. Os modelos de cura foram desenvolvidos para incorporar a possibilidade de uma parcela da população não apresentar o evento de interesse \citep{MallerZhou1996}. Entre as principais classes de modelos de cura estão os modelos de mistura, os modelos defeituosos e os modelos de tempo de promoção.
+
+No modelo de tempo de promoção, considera-se que o indivíduo possui um número latente de fatores ou causas que podem produzir a falha. Esse
+número é geralmente modelado por uma distribuição Poisson \citep{Yakovlev1996}. Os tempos de ativação associados a essas causas são considerados latentes e, quando existem causas presentes, o tempo de falha corresponde ao menor desses tempos. Assim, indivíduos para os quais não existem causas latentes são naturalmente associados à condição de cura. Dessa forma, a fração de cura é incorporada diretamente ao mecanismo de geração dos tempos de sobrevivência, não sendo necessário introduzir separadamente um indicador de susceptibilidade.
+
+Além disso, no presente problema existem duas causas distintas de falha: a morte por câncer ósseo e a morte por outras causas. Esses dois eventos não podem ocorrer simultaneamente como primeiro evento observado. Assim, a morte por uma causa
+impede a observação posterior da outra causa no mesmo indivíduo, caracterizando um problema de riscos competitivos \citep{pintilie2006competing}.
+
+\cite{nicolaie2010vertical} propuseram a abordagem de modelagem vertical para riscos competitivos, decompondo a distribuição conjunta em um componente relacionado ao tempo de falha e outro relacionado à causa da falha condicionalmente ao tempo. Posteriormente, \cite{Nicolaie2019} estenderam essa abordagem para situações com uma fração de cura, utilizando a abordagem de mistura padrão. Neste estudo, será utilizada a formulação de tempo de promoção.
+
+Dessa forma, o modelo permite analisar três aspectos da sobrevivência dos pacientes: a possibilidade de não ocorrer uma falha, o tempo até sua ocorrência e a causa responsável pelo óbito. A fração de cura é determinada a partir de fatores não observados que representam possíveis mecanismos de ocorrência da falha, sem corresponder diretamente às causas de morte estudadas.
+
+
+
+\subsection{Modelo vertical de riscos competitivos com tempo de promoção}
+
+Considere um indivíduo que pode apresentar uma entre $J$ causas competitivas de falha ou ser censurado. Seja $N_i$ o número latente de causas capazes de produzir o evento para o indivíduo $i$. Além disso, sejam $\bm W_i$ e $\bm U_i$ respectivamente, os vetores de covariáveis associados à componente de causas latentes e à componente da causa da falha. No modelo de tempo de promoção, assume-se que
+
+$$
+N_i\mid \bm W_i \sim \text{Poisson}(\theta_i),
+$$
+
+\noindent em que $\theta_i$ representa o número médio de causas latentes e pode depender de covariáveis. A probabilidade de cura corresponde à probabilidade de não existir nenhuma causa latente, isto é,
+
+$$
+p_{0i}=\Prb(N_i=0\mid\bm W_i)=\exp(-\theta_i).
+$$
+
+Assim, quanto menor o número esperado de causas latentes, maior a probabilidade de o indivíduo pertencer à fração de cura.
+
+Para os indivíduos que possuem pelo menos uma causa latente, considera-se que cada causa possui um tempo de ativação. Assume-se que esses tempos sejam independentes e identicamente distribuídos, com função de distribuição comum \(F_0(t)\), e independentes do número de causas latentes. O tempo até a falha é definido como o menor desses tempos de ativação. A partir desse mecanismo, a função de sobrevivência populacional assume a forma
+
+$$
+S_{\mathrm{pop},i}(t)=\exp\{{-\theta_iF_0(t)}\},
+$$
+
+\noindent em que $F_0(t)$ representa a distribuição do tempo de ativação de uma causa latente. Consequentemente, a fração de cura é obtida pelo limite da função de sobrevivência quando $t\rightarrow\infty$, resultando em $p_{0i}=\exp(-\theta_i)$, quando $F_0(\infty)=1$ \citep{Yakovlev1996}.
+
+As causas latentes consideradas no modelo de tempo de promoção são distintas das causas de morte observadas, mas representam fatores não observados que podem levar à ocorrência de uma falha. Já as causas competitivas permitem distinguir se o óbito ocorreu em decorrência do câncer ósseo ou de outras causas. Dessa forma, como o estudo considera ambos os tipos de morte, a fração de cura estimada representa a probabilidade de não apresentar nenhuma dessas falhas, não devendo ser interpretada necessariamente como cura clínica do câncer.
+
+
+A modelagem vertical permite separar essa componente relacionada ao tempo de falha da componente relacionada à causa do evento. Sendo $\widetilde T_i$ o tempo do evento, define-se
+$$
+\pi_{ij}(t)
+ =\Prb(D_i=j\mid\widetilde T_i=t,\bm U_i),
+$$
+
+\noindent que representa a probabilidade de a causa observada ser $j$, dado que a falha ocorre no instante $t$. As probabilidades das $J$ causas satisfazem $\sum_{j=1}^{J}\pi_{ij}(t)=1$. Dessa forma, a função de risco da população para a causa $j$ pode ser escrita como
+$$
+\lambda_{ij}(t)=\theta_i f_0(t)\pi_{ij}(t),
+$$
+
+\noindent com a componente $\theta_i f_0(t)$ relacionada ao tempo de falha e $\pi_{ij}(t)$ relacionada à causa do evento \citep{nicolaie2010vertical}.
+
+A função de incidência acumulada (FIA) da causa $j$, isto é, a probabilidade de ocorrer uma falha por essa causa até o instante $t$, é obtida por
+\begin{equation}
+F_{ij}(t)=\int_0^t \theta_i f_0(u) S_{\mathrm{pop},i}(u)\pi_{ij}(u)\,du.
+\end{equation}
+Para cada instante de tempo, a soma da sobrevivência populacional e das incidências acumuladas das diferentes causas é igual a um. Além disso, as curvas de sobrevivência e de incidência acumulada entre os indivíduos suscetíveis, apresentadas na aplicação, são obtidas condicionando-se a $N_i>0$:
+\begin{equation}
+S_{i}(t|N_i>0)=\frac{S_{\mathrm{pop},i}(t)-p_{0i}}{1-p_{0i}},
+\qquad
+F_{ij}(t|N_i>0)=\frac{F_{ij}(t)}{1-p_{0i}}.
+\end{equation}
+
+
+Para a componente de causas latentes, pretende-se utilizar uma função de ligação logarítmica,
+
+$$
+\log(\theta_i)=\bm W_i^\top\gamma,
+$$
+
+\noindent de modo que as covariáveis influenciem a quantidade esperada de causas latentes e, consequentemente, a probabilidade de cura. Como $p_{0i}=\exp(-\theta_i)$, um coeficiente positivo em $\gamma$ está associado ao aumento do número esperado de causas latentes e à redução da probabilidade de cura, mantidas as demais covariáveis constantes.
+
+Já a distribuição do tempo de ativação será representada por um modelo de risco exponencial por partes, permitindo diferentes níveis de risco ao longo do tempo. Nesse modelo, o tempo é dividido em $K$ intervalos, definidos pelos pontos de corte $0=s_0<s_1<\cdots<s_{K-1}<s_K=\infty$. A função de risco de ativação permanece constante dentro de cada intervalo, mas pode assumir valores diferentes entre eles:
+\begin{equation}
+h_0(t)=\lambda_k,\qquad s_{k-1}\leq t<s_k,\quad k=1,\ldots,K,
+\end{equation}
+\noindent em que $\lambda_k>0$ representa a taxa de ativação no $k$-ésimo intervalo. Os tempos nos pontos de corte são incluídos no intervalo seguinte. Portanto, $K$ corresponde ao número de intervalos de tempo e, consequentemente, ao número de taxas de ativação estimadas. Quando $K=1$, considera-se uma única taxa constante em todo o período; com $K>1$, estimam-se mais taxas, que podem ser diferentes. Aumentar $K$ torna o modelo mais flexível, mas também aumenta o número de parâmetros.
+
+Definindo por $e_k(t)=\max\{0,\min(t,s_k)-s_{k-1}\}$ o tempo acumulado no intervalo $k$ até o instante $t$, a função de risco acumulado, a sobrevivência e a densidade dos tempos de ativação são, respectivamente,
+\begin{equation}
+H_0(t)=\sum_{k=1}^{K}\lambda_k e_k(t),\qquad
+S_0(t)=\exp\{-H_0(t)\},\qquad
+f_0(t)=h_0(t)S_0(t),
+\end{equation}
+\noindent sendo $F_0(t)=1-S_0(t)$. É importante observar que $\lambda_k$ representa uma taxa de ativação de fatores latentes, não diretamente a taxa de mortalidade por câncer ósseo ou por outras causas. A influência das covariáveis sobre o tempo até a falha ocorre por meio de $\theta_i$.
+
+Na aplicação, os $K-1$ pontos de corte internos são definidos pelos quantis dos tempos em que ocorreram óbitos, considerando conjuntamente as duas causas. Assim, para $K=5$, por exemplo, são utilizados os quantis de 20\%, 40\%, 60\% e 80\%, formando cinco intervalos temporais, sendo o último estendido até o infinito. Os tempos de acompanhamento são convertidos de dias para anos antes do ajuste, de modo que as taxas de ativação são expressas por ano. Para escolher o número de intervalos, foram comparados modelos com $K=1,\ldots,10$ por meio dos critérios AIC, AICc e BIC, que consideram tanto a qualidade do ajuste quanto a quantidade de parâmetros. Denotando por $\widehat\ell$ a log-verossimilhança maximizada, por $p$ o número de parâmetros e por $n$ o tamanho da amostra, esses critérios são calculados por
+\begin{equation}
+\mathrm{AIC}=-2\widehat\ell+2p,\qquad
+\mathrm{AICc}=\mathrm{AIC}+\frac{2p(p+1)}{n-p-1},\qquad
+\mathrm{BIC}=-2\widehat\ell+p\log(n).
+\end{equation}
+Em particular, para o tamanho amostral considerado, o BIC penaliza mais fortemente modelos com maior número de parâmetros, favorecendo especificações mais parcimoniosas. Essa comparação fundamenta a escolha de $K$ apresentada na Seção~4.
+
+
+Por fim, a distribuição das causas competitivas será modelada por meio de um modelo logístico multinomial, permitindo que a probabilidade relativa de cada causa varie com o tempo e com covariáveis. Assim, o modelo proposto é composto por três elementos principais: (i) o número esperado de causas latentes, responsável por induzir a fração de cura; (ii) a distribuição dos tempos de ativação, responsável pela dinâmica do tempo até a falha; e (iii) a distribuição da causa condicional ao tempo de falha, responsável pela diferenciação entre os riscos competitivos.
+
+Como na aplicação são consideradas apenas duas causas de morte, o modelo logístico multinomial se reduz a uma regressão logística binária, com a morte por câncer ósseo como categoria de referência. Denotando por $D_i=1$ a morte por câncer ósseo e por $D_i=2$ a morte por outras causas, especifica-se
+\begin{equation}
+\log\left\{\frac{\pi_{i2}(t)}{\pi_{i1}(t)}\right\}
+=\bm B(t)^\top\boldsymbol\kappa+\bm U_i^\top\boldsymbol\nu,
+\qquad \bm B(t)=(1,\log t)^\top,
+\end{equation}
+\noindent de modo que $\boldsymbol\kappa=(\kappa_0,\kappa_t)^\top$ reúne o intercepto e o efeito de $\log(t)$, enquanto $\boldsymbol\nu$ contém os coeficientes das covariáveis individuais. Nas Tabelas 7 e 10, os mesmos coeficientes são apresentados sob a notação $\beta$: $\beta_0$ e $\beta_t$ correspondem a $\kappa_0$ e $\kappa_t$, e os demais $\beta$ correspondem aos elementos de $\boldsymbol\nu$.
+
+
+Dessa forma, os coeficientes do componente vertical descrevem como as covariáveis se relacionam com as chances de morte por outras causas em comparação com a morte por câncer ósseo, entre os indivíduos que falham em um mesmo instante. A inclusão de $\log(t)$ permite que essa relação varie durante o acompanhamento. 
+
+
+A estimação dos parâmetros será realizada por máxima verossimilhança, utilizando o algoritmo EM, no qual o número de causas latentes $N_i$ é tratado como uma variável não observada. A formulação permite obter estimativas da probabilidade de cura, da função de sobrevivência e das funções de incidência acumulada para as diferentes causas.
+
+Considere $n$ indivíduos independentes. Para o indivíduo $i$, sejam $\widetilde T_i$ o tempo até a falha e $C_i$ o tempo de censura, de modo que $T_i=\min(\widetilde T_i,C_i)$ é o tempo observado. Define-se $\Delta_i=I(\widetilde T_i\leq C_i)$, que indica a ocorrência de uma falha, e $\widetilde D_i=\Delta_iD_i$, em que $D_i\in\{1,\ldots,J\}$ identifica a causa da falha e $\widetilde D_i=0$ indica censura. Além disso, seja $\delta_{ij}=I(\widetilde D_i=j)$, de forma que $\delta_i=\sum_{j=1}^{J}\delta_{ij}$. Assume-se que a censura é independente do tempo e da causa de falha, condicionalmente às covariáveis consideradas.
+
+A verossimilhança observada pode ser escrita como:
+\begin{equation}
+L(\boldsymbol\theta)=\prod_{i=1}^{n}
+\left[\theta_i f_0(t_i)
+\prod_{j=1}^{J}\pi_{ij}(t_i)^{\delta_{ij}}\right]^{\delta_i}
+\exp\{-\theta_iF_0(t_i)\},
+\end{equation}
+\noindent em que $\boldsymbol\theta=(\boldsymbol\gamma^\top,\boldsymbol\lambda^\top,\boldsymbol\kappa^\top,\boldsymbol\nu^\top)^\top$ reúne os parâmetros dos dois componentes para o caso de duas causas. A log-verossimilhança correspondente é
+\begin{equation}
+\ell(\boldsymbol\theta)=
+\sum_{i=1}^{n}\delta_i\left[
+\log\theta_i+\log f_0(t_i)
++\sum_{j=1}^{J}\delta_{ij}\log\pi_{ij}(t_i)\right]
+-\sum_{i=1}^{n}\theta_iF_0(t_i).
+\end{equation}
+
+Os parâmetros do componente do tempo de falha são $\boldsymbol\gamma$ e $\boldsymbol\lambda=(\lambda_1,\ldots,\lambda_K)^\top$, enquanto os parâmetros do componente vertical são representados por $\boldsymbol\kappa$ e $\boldsymbol\nu$, associados, respectivamente, às funções do tempo e às covariáveis. Portanto, a verossimilhança se fatoriza como
+\begin{equation}
+L(\boldsymbol\theta)
+=L_1(\boldsymbol\gamma,\boldsymbol\lambda)
+L_2(\boldsymbol\kappa,\boldsymbol\nu),
+\end{equation}
+\noindent permitindo estimar separadamente o componente relacionado ao tempo até a falha e aquele relacionado à causa da morte. 
+
+
+
+Embora a verossimilhança observada seja conhecida, utiliza-se o algoritmo EM para estimar os parâmetros do componente do tempo de falha, considerando $N_i$ como dado não observado. Desconsiderando termos que não dependem dos parâmetros, a log-verossimilhança dos dados completos é dada por
+\begin{equation}
+\ell_c=
+\sum_{i=1}^{n}\left\{-\theta_i+N_i\log\theta_i
++\delta_i\log h_0(t_i)+N_i\log S_0(t_i)\right\}
++\sum_{i=1}^{n}\sum_{j=1}^{J}\delta_{ij}\log\pi_{ij}(t_i).
+\end{equation}
+
+Na etapa E da iteração $m$, calcula-se o valor esperado do número de causas latentes, condicionalmente aos dados observados e aos valores atuais dos parâmetros:
+\begin{equation}
+z_i^{(m)}
+=\operatorname E\!\left(N_i\mid\mathcal{D},\boldsymbol\theta^{(m)}\right)
+=\delta_i+\theta_i^{(m)}S_0^{(m)}\!\left(t_i\right).
+\end{equation}
+Na etapa M, maximiza-se a esperança condicional da log-verossimilhança completa, que, desconsiderando termos constantes, é
+\begin{equation}
+\begin{aligned}
+Q(\boldsymbol\theta\mid\boldsymbol\theta^{(m)})
+={}&\sum_{i=1}^{n}\left\{-\theta_i+z_i^{(m)}\log\theta_i
++\delta_i\log h_0(t_i)-z_i^{(m)}H_0(t_i)\right\}\\
+&+\sum_{i=1}^{n}\sum_{j=1}^{J}\delta_{ij}\log\pi_{ij}(t_i).
+\end{aligned}
+\end{equation}
+
+Os coeficientes $\boldsymbol\gamma$, associados à média $\theta_i$ da distribuição Poisson, são atualizados por uma regressão Poisson com ligação logarítmica, utilizando $z_i^{(m)}$ como resposta. Para o modelo exponencial por partes, as taxas de ativação possuem a atualização explícita
+\begin{equation}
+\lambda_k^{(m+1)}
+=\frac{d_k}{\displaystyle\sum_{i=1}^{n}z_i^{(m)}e_k(t_i)},
+\qquad
+ d_k=\sum_{i=1}^{n}\delta_i \mathbb{I}(s_{k-1}\leq t_i< s_k),
+\quad k=1,\ldots,K,
+\end{equation}
+\noindent em que $d_k$ é o número de falhas observadas no intervalo de $[s_{k-1}, s_k)$, independentemente da causa, e $e_k(t_i)$ é o tempo acumulado de exposição do indivíduo $i$ nesse intervalo. Os coeficientes $(\boldsymbol\kappa,\boldsymbol\nu)$ do componente vertical são estimados por regressão logística entre os indivíduos que apresentaram falha, sem depender dos números latentes. As etapas E e M são repetidas até que a variação relativa da log-verossimilhança observada seja inferior à tolerância estabelecida.
+
+Na aplicação, sexo, idade, ano do diagnóstico, categoria de atendimento, estágio clínico, metástase, radioterapia, quimioterapia e cirurgia são considerados no componente de causas latentes. Inicialmente, essas covariáveis também são incluídas no componente vertical, juntamente com o logaritmo do tempo. Posteriormente, foi considerada uma especificação reduzida, com a retirada da variável metástase apenas do componente vertical, mantendo-a no componente de tempo de promoção. As variáveis idade e ano do diagnóstico foram padronizadas durante o ajuste.
+
+A comparação entre o modelo completo e o reduzido é realizada por meio dos critérios de informação e do teste da razão de verossimilhanças, uma vez que os modelos são encaixados. A estatística é dada por $\mathrm{LR}=2(\widehat\ell_{\mathrm{completo}}-\widehat\ell_{\mathrm{reduzido}})$ e, sob as condições assintóticas usuais, é comparada com a distribuição qui-quadrado com um grau de liberdade.
+
+
+Seja $\boldsymbol{\vartheta} = \left(\boldsymbol{\gamma}^{\top},
+\boldsymbol{\lambda}^{\top},\boldsymbol{\kappa}_{1}^{\top},\boldsymbol{\nu}_{1}^{\top},\ldots,\boldsymbol{\kappa}_{J-1}^{\top},\boldsymbol{\nu}_{J-1}^{\top}
+\right)^{\top}$ o vetor que reúne todos os parâmetros livres do modelo, e seja $\widehat{\boldsymbol{\vartheta}}$ a estimativa de máxima verossimilhança obtida pelo algoritmo EM. Para avaliar a incerteza das estimativas, utiliza-se a matriz de informação observada, definida por
+\begin{equation}
+\mathcal I_{\mathrm{obs}}(\boldsymbol\vartheta)
+=-\frac{\partial^2\ell(\boldsymbol\vartheta)}
+{\partial\boldsymbol\vartheta\,\partial\boldsymbol\vartheta^\top},
+\qquad
+\widehat{\operatorname{Var}}(\widehat{\boldsymbol\vartheta})
+=\mathcal I_{\mathrm{obs}}(\widehat{\boldsymbol\vartheta})^{-1}.
+\end{equation}
+
+A matriz de informação observada é calculada por dois procedimentos: numericamente, a partir da Hessiana da log-verossimilhança, e analiticamente, por meio da identidade de Louis (1982), dada por
+
+\begin{equation}
+\mathcal I_{\mathrm{obs}}(\boldsymbol\vartheta)
+=
+\mathcal I_{\mathrm{comp}}(\boldsymbol\vartheta)
+-
+\mathcal I_{\mathrm{miss}}(\boldsymbol\vartheta),
+\end{equation}
+
+\noindent em que \(\mathcal I_{\mathrm{comp}}\) representa a informação dos dados completos e \(\mathcal I_{\mathrm{miss}}\) corresponde à informação ausente devido às variáveis latentes. Os erros-padrão são obtidos a partir da inversa da matriz de informação observada, permitindo comparar os resultados dos dois procedimentos. Adicionalmente, são calculados erros-padrão e intervalos percentis de confiança de 95\% por bootstrap não paramétrico, com 500 reamostragens. Os intervalos de confiança aproximados de Wald, ao nível de 95\%, são construídos na escala original dos parâmetros, conforme a expressão a seguir:
+
+\begin{equation}
+IC_{95\%}(\vartheta_r)=
+\left[
+\widehat{\vartheta}_r-1{,}96\,\widehat{\mathrm{EP}}(\widehat{\vartheta}_r),
+\quad
+\widehat{\vartheta}_r+1{,}96\,\widehat{\mathrm{EP}}(\widehat{\vartheta}_r)
+\right],
+\end{equation}
+\noindent em que \(\widehat{\vartheta}_r\) representa a estimativa do \(r\)-ésimo parâmetro e \(\widehat{EP}(\widehat{\vartheta}_r)\) seu erro-padrão, estimado pela Hessiana numérica ou pela identidade de Louis.
+
+Por fim, as curvas gerais da aplicação são obtidas a partir das predições individuais, considerando toda a população estudada. Nas análises por perfil, a sobrevivência apresentada em conjunto com a curva de Kaplan–Meier corresponde aos pacientes do respectivo estágio clínico, enquanto as demais curvas representam as predições para os perfis individuais selecionados.
+
+ \section{Aplicação}
+
+Para a aplicação, foram ajustados modelos com diferentes números de intervalos para a distribuição dos tempos de ativação latentes, a fim de selecionar uma especificação adequada para a função de risco exponencial por partes. Em seguida, estimou-se o modelo com todas as covariáveis nos componentes de tempo de promoção e de causa da falha. 
+
+A organização das variáveis para inclusão nos modelos foi feita de acordo com: $\mathrm{Fem}_i$ o indicador de sexo feminino, $\mathrm{SUS}_i$ o indicador de atendimento pelo Sistema Único de Saúde, $\mathrm{EC}_{23,i}$ e $\mathrm{EC}_{4,i}$ os indicadores dos estágios II/III e IV, respectivamente, e $\mathrm{M}_i$, $\mathrm{RAD}_i$, $\mathrm{QUI}_i$ e $\mathrm{CIR}_i$ os indicadores de presença de metástase e realização de radioterapia, quimioterapia e cirurgia. As categorias de referência são sexo masculino, atendimento por convênio ou particular, estágio clínico I, ausência de metástase e ausência de cada modalidade de tratamento. A idade e o ano do diagnóstico foram padronizados no ajuste, sendo representados por $\mathrm{Idade}_i^*$ e $\mathrm{Ano}_i^*$; assim, seus coeficientes se referem a variações de um desvio-padrão nas respectivas variáveis originais.
+
+No componente de tempo de promoção, a quantidade média de causas latentes é relacionada às covariáveis por meio da ligação logarítmica. Considerando as variáveis selecionadas, a expressão utilizada no ajuste inicial é:
+\begin{equation}
+\begin{aligned}
+\log(\theta_i)={}&\gamma_0+\gamma_1\mathrm{Fem}_i
++\gamma_2\mathrm{Idade}_i^*+\gamma_3\mathrm{Ano}_i^*
++\gamma_4\mathrm{SUS}_i\\
+&+\gamma_5\mathrm{EC}_{23,i}+\gamma_6\mathrm{EC}_{4,i}
++\gamma_7\mathrm{M}_i+\gamma_8\mathrm{RAD}_i\\
+&+\gamma_9\mathrm{QUI}_i+\gamma_{10}\mathrm{CIR}_i.
+\end{aligned}
+\label{eq:aplicacao_promocao}
+\end{equation}
+Como $\theta_i=\exp(\bm W_i^\top\bm\gamma)$ e $p_{0i}=\exp(-\theta_i)$, os coeficientes desse componente descrevem a associação das covariáveis com o número médio de causas latentes e com a fração de cura. Portanto, coeficientes positivos de $\bm\gamma$ indicam maiores valores de $\theta_i$ e menores probabilidades de cura, mantidas as demais variáveis constantes.
+
+Para o componente vertical, a morte por câncer ósseo foi adotada como categoria de referência, sendo modeladas as chances relativas de óbito por outras causas entre os indivíduos que apresentam falha. Com a inclusão do logaritmo do tempo, a especificação completa do modelo inicial é dada por:
+\begin{equation}
+\begin{aligned}
+\log\!\left\{\frac{\pi_{i2}(t)}{\pi_{i1}(t)}\right\}
+={}&\kappa_0+\kappa_t\log(t)+\nu_1\mathrm{Fem}_i
++\nu_2\mathrm{Idade}_i^*+\nu_3\mathrm{Ano}_i^*\\
+&+\nu_4\mathrm{SUS}_i+\nu_5\mathrm{EC}_{23,i}
++\nu_6\mathrm{EC}_{4,i}+\nu_7\mathrm{M}_i\\
+&+\nu_8\mathrm{RAD}_i+\nu_9\mathrm{QUI}_i
++\nu_{10}\mathrm{CIR}_i,
+\end{aligned}
+\label{eq:aplicacao_vertical_completo}
+\end{equation}
+\noindent em que $\pi_{i1}(t)$ e $\pi_{i2}(t)$ representam as probabilidades condicionais de cada causa, dado que ocorre uma falha no instante $t$. Os parâmetros $\kappa_0$ e $\kappa_t$ correspondem ao intercepto e ao efeito do logaritmo do tempo, enquanto $\bm\nu$ reúne os efeitos das covariáveis individuais. Nas tabelas de resultados, esses coeficientes são identificados, respectivamente, por $\beta_0$, $\beta_t$ e pelos demais $\beta$. Um coeficiente positivo nesse componente indica maiores chances relativas de morte por outras causas em comparação à morte por câncer ósseo, entre indivíduos que falham no mesmo instante.
+
+Para representar a distribuição dos tempos de ativação latentes, foram considerados modelos exponenciais por partes com $K=1,\ldots,10$ intervalos. Em cada ajuste, os $K-1$ pontos de corte internos foram definidos pelos quantis dos tempos de óbito observados, considerando conjuntamente as duas causas, e o último intervalo indo até o infinito. Dessa forma, cada valor de $K$ determina uma divisão temporal diferente e um conjunto de taxas de ativação ($\lambda_1,\ldots,\lambda_K$). A Tabela~6 apresenta a log-verossimilhança, a quantidade de parâmetros e os critérios AIC, AICc e BIC para essas dez especificações. Valores menores dos critérios de informação indicam melhor equilíbrio entre a qualidade do ajuste e a complexidade do modelo.
+
+\begin{table}[H]
+\centering
+\sf
+\setlength{\tabcolsep}{5pt}
+\renewcommand{\arraystretch}{1.16}
+\caption{Comparação dos modelos segundo o número de intervalos da função de risco de ativação.}
+\label{tab:comparacao_k}
+\begin{tabular}{@{}rrrrrr@{}}
+\toprule
+$K$ & Log-verossimilhança & Parâmetros & AIC & AICc & BIC \\
+\midrule
+1 & $-4417{,}835$ & 24 & $8883{,}669$ & $8884{,}133$ & $9024{,}508$ \\
+2 & $-4416{,}314$ & 25 & $8882{,}629$ & $8883{,}131$ & $9029{,}335$ \\
+3 & $-4398{,}101$ & 26 & $8848{,}202$ & $8848{,}745$ & $9000{,}777$ \\
+4 & $-4386{,}523$ & 27 & $8827{,}045$ & $8827{,}630$ & $8985{,}488$ \\
+5 & $-4371{,}562$ & 28 & $8799{,}124$ & $8799{,}753$ & \textbf{$8963{,}435$} \\
+6 & $-4368{,}456$ & 29 & $8794{,}911$ & $8795{,}585$ & $8965{,}091$ \\
+7 & $-4366{,}745$ & 30 & $8793{,}489$ & $8794{,}210$ & $8969{,}537$ \\
+8 & $-4370{,}735$ & 31 & $8803{,}469$ & $8804{,}238$ & $8985{,}385$ \\
+9 & $-4363{,}420$ & 32 & $8790{,}840$ & $8791{,}659$ & $8978{,}624$ \\
+10 & $-4361{,}561$ & 33 & \textbf{$8789{,}123$} & \textbf{$8789{,}993$} & $8982{,}775$ \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+Observa-se na Tabela~\ref{tab:comparacao_k} que, de modo geral, o aumento do número de intervalos gera valores maiores da log-verossimilhança. O modelo com $K=1$, que possui taxa de ativação constante ao longo do tempo, apresentou log-verossimilhança de $-4417{,}835$ e BIC de $9024{,}508$. Ao considerar cinco intervalos, a log-verossimilhança aumentou para $-4371{,}562$ e o BIC diminuiu para $8963{,}435$, que foi o menor valor observado entre os modelos comparados. 
+
+Embora o menor AIC e o menor AICc tenham sido obtidos com $K=10$, o BIC favoreceu o modelo com cinco intervalos. Essa diferença decorre da maior penalização imposta pelo BIC ao aumento do número de parâmetros. Assim, optou-se por $K=5$, dado que o modelo com $K=5$ possui 28 parâmetros, enquanto o modelo com $K=10$ possui 33 parâmetros. Desse modo, busca-se mais parcimônia, representando as mudanças nas taxas de ativação ao longo do tempo sem acrescentar complexidade excessiva ao modelo. Com essa escolha, foram estimadas cinco taxas constantes em seus respectivos intervalos, mas que podem assumir valores diferentes entre si. 
+
+Após a seleção de $K=5$, foi ajustado o modelo completo, incluindo sexo, idade, ano do diagnóstico, categoria de atendimento, estágio clínico, metástase, radioterapia, quimioterapia e cirurgia nos dois componentes descritos anteriormente. Os coeficientes foram estimados por máxima verossimilhança, utilizando o algoritmo EM no componente de tempo de promoção e a regressão logística no componente vertical. A Tabela~\ref{tab:regressao_k5_completa} apresenta as estimativas dos parâmetros $\bm\gamma$, das cinco taxas $\lambda_k$ e dos coeficientes associados à distribuição das causas competitivas.
+
+Para avaliar a precisão das estimativas, foram considerados os erros-padrão obtidos pela matriz de informação observada, calculada numericamente a partir da Hessiana, identificados na tabela por EP (H), e os respectivos intervalos de confiança de 95\%, indicados por IC 95\% (H). Também foram calculados erros-padrão bootstrap, EP (B), e intervalos percentis bootstrap de 95\%, IC 95\% (B), com 500 reamostragens não paramétricas. Os $p$-valores apresentados para os coeficientes de regressão correspondem a testes aproximados de Wald. Os intervalos de Wald foram construídos na escala original de cada parâmetro. 
+
+\begin{table}[H]
+\centering
+\sf
+\caption{Estimativas do modelo de tempo de promoção com riscos competitivos e $K=5$ intervalos, com todas as covariáveis nos dois componentes.}
+\label{tab:regressao_k5_completa}
+\begingroup
+\small
+\setlength{\tabcolsep}{2.6pt}
+\renewcommand{\arraystretch}{1.16}
+\begin{adjustbox}{max width=\textwidth}
+\begin{tabular}{@{}lrrrrrrrr@{}}
+\toprule
+Parâmetro & Estimativa & EP (H) & IC 95\% (H) & EP (L) & IC 95\% (L) & EP (B) & IC 95\% (B) & $p$-valor \\
+\midrule
+\multicolumn{9}{@{}l}{\textbf{Componente de tempo de promoção ($\gamma$)}} \\
+\addlinespace[2pt]
+$\gamma_{0}$ Intercepto & $-0{,}6396$ & $0{,}1356$ & $[-0{,}9053;\ -0{,}3739]$ & $0{,}1357$ & $[-0{,}9055;\ -0{,}3736]$ & $0{,}1370$ & $[-0{,}8593;\ -0{,}3430]$ & $<0{,}0001$ \\
+$\gamma_{1}$ Sexo feminino & $-0{,}0367$ & $0{,}0550$ & $[-0{,}1444;\ 0{,}0710]$ & $0{,}0550$ & $[-0{,}1444;\ 0{,}0710]$ & $0{,}0582$ & $[-0{,}1505;\ 0{,}0812]$ & $0{,}5042$ \\
+$\gamma_{2}$ Idade & $0{,}3552$ & $0{,}0292$ & $[0{,}2979;\ 0{,}4125]$ & $0{,}0292$ & $[0{,}2979;\ 0{,}4125]$ & $0{,}0326$ & $[0{,}2867;\ 0{,}4201]$ & $<0{,}0001$ \\
+$\gamma_{3}$ Ano & $-0{,}0871$ & $0{,}0285$ & $[-0{,}1430;\ -0{,}0312]$ & $0{,}0285$ & $[-0{,}1430;\ -0{,}0312]$ & $0{,}0300$ & $[-0{,}1423;\ -0{,}0290]$ & $0{,}0023$ \\
+$\gamma_{4}$ Atendimento SUS & $0{,}3807$ & $0{,}1011$ & $[0{,}1826;\ 0{,}5788]$ & $0{,}1011$ & $[0{,}1826;\ 0{,}5788]$ & $0{,}0978$ & $[0{,}1928;\ 0{,}5833]$ & $0{,}0002$ \\
+$\gamma_{5}$ Estágio II/III & $0{,}5662$ & $0{,}0782$ & $[0{,}4129;\ 0{,}7195]$ & $0{,}0782$ & $[0{,}4129;\ 0{,}7195]$ & $0{,}0790$ & $[0{,}4154;\ 0{,}7227]$ & $<0{,}0001$ \\
+$\gamma_{6}$ Estágio IV & $1{,}1566$ & $0{,}1666$ & $[0{,}8302;\ 1{,}4831]$ & $0{,}1666$ & $[0{,}8302;\ 1{,}4831]$ & $0{,}1801$ & $[0{,}8165;\ 1{,}4981]$ & $<0{,}0001$ \\
+$\gamma_{7}$ Metástase & $0{,}2798$ & $0{,}1582$ & $[-0{,}0303;\ 0{,}5900]$ & $0{,}1582$ & $[-0{,}0303;\ 0{,}5900]$ & $0{,}1729$ & $[-0{,}0610;\ 0{,}6335]$ & $0{,}0770$ \\
+$\gamma_{8}$ Radioterapia & $0{,}0264$ & $0{,}0672$ & $[-0{,}1054;\ 0{,}1582]$ & $0{,}0672$ & $[-0{,}1054;\ 0{,}1582]$ & $0{,}0704$ & $[-0{,}1106;\ 0{,}1668]$ & $0{,}6948$ \\
+$\gamma_{9}$ Quimioterapia & $0{,}4777$ & $0{,}0787$ & $[0{,}3235;\ 0{,}6319]$ & $0{,}0787$ & $[0{,}3235;\ 0{,}6319]$ & $0{,}0821$ & $[0{,}3075;\ 0{,}6226]$ & $<0{,}0001$ \\
+$\gamma_{10}$ Cirurgia & $-0{,}6705$ & $0{,}0596$ & $[-0{,}7874;\ -0{,}5536]$ & $0{,}0596$ & $[-0{,}7874;\ -0{,}5536]$ & $0{,}0630$ & $[-0{,}7936;\ -0{,}5511]$ & $<0{,}0001$ \\
+\addlinespace[3pt]
+\multicolumn{9}{@{}l}{\textbf{Taxas de ativação ($\lambda_k$)}} \\
+\addlinespace[2pt]
+$\lambda_{1}$ & $0{,}1139$ & $0{,}0098$ & $[0{,}0946;\ 0{,}1332]$ & $0{,}0099$ & $[0{,}0946;\ 0{,}1332]$ & $0{,}0109$ & $[0{,}0897;\ 0{,}1339]$ & -- \\
+$\lambda_{2}$ & $0{,}1841$ & $0{,}0165$ & $[0{,}1518;\ 0{,}2164]$ & $0{,}0165$ & $[0{,}1517;\ 0{,}2165]$ & $0{,}0178$ & $[0{,}1458;\ 0{,}2157]$ & -- \\
+$\lambda_{3}$ & $0{,}2044$ & $0{,}0193$ & $[0{,}1665;\ 0{,}2423]$ & $0{,}0194$ & $[0{,}1663;\ 0{,}2424]$ & $0{,}0219$ & $[0{,}1585;\ 0{,}2412]$ & -- \\
+$\lambda_{4}$ & $0{,}1902$ & $0{,}0204$ & $[0{,}1502;\ 0{,}2302]$ & $0{,}0205$ & $[0{,}1500;\ 0{,}2304]$ & $0{,}0245$ & $[0{,}1359;\ 0{,}2293]$ & -- \\
+$\lambda_{5}$ & $0{,}1057$ & $0{,}0161$ & $[0{,}0741;\ 0{,}1372]$ & $0{,}0162$ & $[0{,}0739;\ 0{,}1374]$ & $0{,}0196$ & $[0{,}0672;\ 0{,}1441]$ & -- \\
+\addlinespace[3pt]
+\multicolumn{9}{@{}l}{\textbf{Componente vertical -- distribuição das causas ($\beta$)}} \\
+\addlinespace[2pt]
+$\beta_{0}$ Intercepto & $-0{,}3468$ & $0{,}3393$ & $[-1{,}0118;\ 0{,}3182]$ & $0{,}3393$ & $[-1{,}0118;\ 0{,}3182]$ & $0{,}3206$ & $[-1{,}0679;\ 0{,}2255]$ & $0{,}3067$ \\
+$\beta_{t}$ Log do tempo & $0{,}6355$ & $0{,}0839$ & $[0{,}4711;\ 0{,}8000]$ & $0{,}0839$ & $[0{,}4711;\ 0{,}8000]$ & $0{,}1092$ & $[0{,}4534;\ 0{,}8797]$ & $<0{,}0001$ \\
+$\beta_{1}$ Sexo feminino & $0{,}1455$ & $0{,}1561$ & $[-0{,}1604;\ 0{,}4514]$ & $0{,}1561$ & $[-0{,}1604;\ 0{,}4514]$ & $0{,}1592$ & $[-0{,}1703;\ 0{,}4457]$ & $0{,}3513$ \\
+$\beta_{2}$ Idade & $0{,}2924$ & $0{,}0775$ & $[0{,}1404;\ 0{,}4444]$ & $0{,}0775$ & $[0{,}1404;\ 0{,}4444]$ & $0{,}0797$ & $[0{,}1363;\ 0{,}4557]$ & $0{,}0002$ \\
+$\beta_{3}$ Ano & $0{,}2340$ & $0{,}0835$ & $[0{,}0703;\ 0{,}3977]$ & $0{,}0835$ & $[0{,}0703;\ 0{,}3977]$ & $0{,}0856$ & $[0{,}0679;\ 0{,}4065]$ & $0{,}0051$ \\
+$\beta_{4}$ Atendimento SUS & $-0{,}3505$ & $0{,}2516$ & $[-0{,}8437;\ 0{,}1427]$ & $0{,}2516$ & $[-0{,}8437;\ 0{,}1427]$ & $0{,}2599$ & $[-0{,}8168;\ 0{,}2004]$ & $0{,}1636$ \\
+$\beta_{5}$ Estágio II/III & $-0{,}5723$ & $0{,}1859$ & $[-0{,}9367;\ -0{,}2079]$ & $0{,}1859$ & $[-0{,}9367;\ -0{,}2079]$ & $0{,}1758$ & $[-0{,}9133;\ -0{,}2139]$ & $0{,}0021$ \\
+$\beta_{6}$ Estágio IV & $-1{,}4059$ & $0{,}6306$ & $[-2{,}6418;\ -0{,}1699]$ & $0{,}6306$ & $[-2{,}6418;\ -0{,}1699]$ & $2{,}6472$ & $[-15{,}2570;\ -0{,}4279]$ & $0{,}0258$ \\
+$\beta_{7}$ Metástase & $0{,}2683$ & $0{,}6339$ & $[-0{,}9741;\ 1{,}5107]$ & $0{,}6339$ & $[-0{,}9741;\ 1{,}5107]$ & $2{,}6498$ & $[-0{,}7720;\ 14{,}0762]$ & $0{,}6721$ \\
+$\beta_{8}$ Radioterapia & $-0{,}3633$ & $0{,}2043$ & $[-0{,}7637;\ 0{,}0370]$ & $0{,}2043$ & $[-0{,}7637;\ 0{,}0370]$ & $0{,}2108$ & $[-0{,}7889;\ 0{,}0040]$ & $0{,}0753$ \\
+$\beta_{9}$ Quimioterapia & $-0{,}6639$ & $0{,}1901$ & $[-1{,}0365;\ -0{,}2913]$ & $0{,}1901$ & $[-1{,}0365;\ -0{,}2913]$ & $0{,}1969$ & $[-1{,}0415;\ -0{,}2897]$ & $0{,}0005$ \\
+$\beta_{10}$ Cirurgia & $-0{,}2883$ & $0{,}1814$ & $[-0{,}6439;\ 0{,}0673]$ & $0{,}1814$ & $[-0{,}6439;\ 0{,}0673]$ & $0{,}1794$ & $[-0{,}6466;\ 0{,}0394]$ & $0{,}1121$ \\
+\bottomrule
+\end{tabular}
+\end{adjustbox}
+\endgroup
+\end{table}
+
+Em relação ao componente de tempo de promoção, a Tabela~\ref{tab:regressao_k5_completa} mostra associações importantes com a idade, o ano do diagnóstico, o caráter de atendimento e, principalmente, o estágio clínico. O coeficiente da idade padronizada foi positivo, $\widehat\gamma_2=0{,}3552$ ($p-$valor$<0{,}0001$), indicando que pacientes de maior idade apresentam, mantidas as demais características constantes, maior número esperado de causas latentes e, consequentemente, menor probabilidade de cura. O coeficiente do ano do diagnóstico foi negativo, $\widehat\gamma_3=-0{,}0871$ ($p-$valor$=0{,}0023$), associando diagnósticos em anos mais recentes a menores valores de $\theta_i$ e maiores probabilidades de cura. 
+
+Quanto à extensão da doença, os coeficientes dos estágios II/III e IV foram positivos, respectivamente $0{,}5662$ e $1{,}1566$, ambos com $p-$valor$<0{,}0001$. Isso mostra que, em comparação com o estágio I e após o ajuste pelas demais covariáveis, os pacientes em estágios mais avançados apresentam maior número esperado de causas latentes, associado a menor fração de cura, com o coeficiente do estágio IV correspondendo a uma razão $\exp(1{,}1566)\approx3{,}18$ no número médio de causas latentes em relação ao estágio I. O atendimento pelo SUS também apresentou coeficiente positivo ($0{,}3807$; $p-$valor$=0{,}0002$). Já o coeficiente para metástase foi positivo ($0{,}2798$), mas seu intervalo de confiança pela Hessiana incluiu zero, assim como o intervalo bootstrap, não fornecendo evidência estatística suficiente de associação isolada ao nível de 5\% nessa variável.
+
+Entre as covariáveis relacionadas ao tratamento, a quimioterapia apresentou coeficiente positivo ($0{,}4777$; $p-$valor$<0{,}0001$), enquanto a cirurgia apresentou coeficiente negativo ($-0{,}6705$; $p-$valor$<0{,}0001$). A radioterapia não apresentou evidência estatística de associação ($p-$valor$=0{,}6948$). 
+
+As taxas estimadas da exponencial por partes foram calculadas na escala anual. Observa-se um aumento da taxa de ativação até o terceiro intervalo, seguido de redução nos dois intervalos posteriores. Esse comportamento evidencia a flexibilidade do modelo exponencial por partes, uma vez que a distribuição dos tempos de ativação não fica restrita a uma única taxa constante durante todo o acompanhamento. Os erros-padrão e intervalos de confiança apresentados na Tabela~\ref{tab:regressao_k5_completa} quantificam a incerteza dessas estimativas em cada intervalo temporal.
+
+No componente vertical, o coeficiente do logaritmo do tempo foi positivo, $\widehat\beta_t=0{,}6355$ ($p-$valor$<0{,}0001$), indicando que, entre os indivíduos que apresentam falha, as chances relativas de morte por outras causas em comparação com a morte por câncer ósseo aumentam com o tempo de acompanhamento. A idade ($\widehat\beta_2=0{,}2924$; $p-$valor$=0{,}0002$) e o ano do diagnóstico ($\widehat\beta_3=0{,}2340$; $p-$valor$=0{,}0051$) também apresentaram coeficientes positivos. Já os coeficientes dos estágios II/III ($-0{,}5723$) e IV ($-1{,}4059$) foram negativos, assim como o coeficiente da quimioterapia ($-0{,}6639$), indicando menores chances relativas de óbito por outras causas em comparação com o óbito por câncer ósseo, mantidas as demais covariáveis e o instante de falha. 
+
+Entretanto, no componente vertical, as estimativas de estágio IV e metástase apresentaram sinais de instabilidade. Embora os erros-padrão calculados tanto pela Hessiana quanto por Louis fossem de $0{,}6306$ e $0{,}6339$, respectivamente, os erros-padrão bootstrap foram substancialmente maiores, $2{,}6472$ e $2{,}6498$. Os intervalos percentis bootstrap também se mostraram muito amplos, especialmente para estágio IV, $[-15{,}2570;\,-0{,}4279]$, e para metástase, $[-0{,}7720;\,14{,}0762]$. Essa diferença sugere dificuldade de estimar separadamente esses dois efeitos, motivando a análise da distribuição dos óbitos segundo o estágio IV e metástase.
+
+Os erros-padrão obtidos pela Hessiana e por Louis apresentaram valores muito próximos, indicando concordância entre os dois procedimentos. Esse resultado acontece porque ambos estimam a mesma matriz de informação observada, diferindo apenas na forma de cálculo. A Hessiana utiliza derivadas numéricas da log-verossimilhança, enquanto a identidade de Louis considera a informação dos dados completos e a informação ausente devido às variáveis latentes. Assim, a proximidade entre os resultados sugere consistência numérica na estimação dos erros-padrão.
+
+A Tabela~\ref{tab:freq_estadio_metastase} apresenta a distribuição conjunta de estágio IV, presença de metástase e causa de morte, considerando apenas os 1.381 indivíduos que apresentaram uma das duas falhas. Essa restrição é relevante porque a regressão logística do componente vertical é estimada a partir dos pacientes com óbito observado. A tabela permite verificar se existem combinações pouco frequentes das covariáveis que dificultem a identificação de seus efeitos nesse componente.
+
+\begin{table}[H]
+\centering
+\small
+\setlength{\tabcolsep}{5pt}
+\renewcommand{\arraystretch}{1.16}
+\caption{Distribuição absoluta dos óbitos segundo estágio IV, presença de metástase e causa de morte entre pacientes que falharam por alguma das causas.}
+\label{tab:freq_estadio_metastase}
+\begin{tabular}{@{}llrrr@{}}
+\toprule
+Estágio IV & Metástase & Câncer ósseo & Outras causas & Total \\
+\midrule
+Não & Não & 586 & 199 & 785 \\
+Não & Sim & 0 & 0 & 0 \\
+Sim & Não & 42 & 3 & 45 \\
+Sim & Sim & 504 & 47 & 551 \\
+\midrule
+\textbf{Total} &  & \textbf{1132} & \textbf{249} & \textbf{1381} \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+Observa-se que, entre os indivíduos que não estavam em estágio IV e não apresentavam metástase, ocorreram 586 óbitos por câncer ósseo e 199 por outras causas. Não houve óbitos na combinação correspondente a pacientes fora do estágio IV, mas com metástase registrada. Entre aqueles em estágio IV sem metástase, foram observados 42 óbitos por câncer ósseo e apenas três por outras causas. Já o grupo em estágio IV com metástase concentrou 504 óbitos por câncer ósseo e 47 por outras causas. Assim, a distribuição das combinações de estágio clínico e metástase é bastante desigual, especialmente entre os pacientes que falharam por outras causas.
+
+Essa configuração ajuda a compreender a instabilidade observada na Tabela~\ref{tab:regressao_k5_completa}. Na estimação bootstrap do modelo completo, a correlação entre os coeficientes de estágio IV e metástase no componente vertical foi de $-0{,}9958$, indicando uma dependência negativa extremamente elevada entre as respectivas estimativas. Como quase todos os pacientes com metástase e falha observada pertenciam ao estágio IV, tornou-se difícil distinguir a contribuição individual dessas duas variáveis para a distribuição das causas de morte. Portanto, os erros-padrão elevados são um indicativo de baixa precisão na separação dos dois efeitos sob essa especificação.
+
+Diante desses resultados, foi considerada uma segunda formulação com $K=5$, na qual a variável metástase foi retirada somente do componente vertical, permanecendo no componente de tempo de promoção. Desse modo, manteve-se a equação de $\log(\theta_i)$, enquanto a equação da razão de probabilidades das causas passou a ser:
+
+\begin{equation}
+\begin{aligned}
+\log\!\left\{\frac{\pi_{i2}(t)}{\pi_{i1}(t)}\right\}
+={}&\kappa_0+\kappa_t\log(t)+\nu_1\mathrm{Fem}_i
++\nu_2\mathrm{Idade}_i^*+\nu_3\mathrm{Ano}_i^*\\
+&+\nu_4\mathrm{SUS}_i+\nu_5\mathrm{EC}_{23,i}
++\nu_6\mathrm{EC}_{4,i}\\
+&+\nu_7\mathrm{RAD}_i+\nu_8\mathrm{QUI}_i
++\nu_9\mathrm{CIR}_i.
+\end{aligned}
+\label{eq:aplicacao_vertical_reduzido}
+\end{equation}
+
+Para avaliar se a retirada da variável metástase do componente vertical comprometia o ajuste, foram comparados os modelos completo e reduzido por meio da log-verossimilhança, dos critérios AIC, AICc e BIC e do teste de razão de verossimilhanças. Como o modelo reduzido é obtido pela exclusão de uma variável, os dois modelos são encaixados, com diferença de um parâmetro entre eles. A Tabela~\ref{tab:comparacao_reduzido} reúne os resultados dessa comparação.
+
+
+\begin{table}[H]
+\centering
+\small
+\setlength{\tabcolsep}{5pt}
+\renewcommand{\arraystretch}{1.16}
+\caption{Comparação dos modelos com $K=5$ intervalos, com e sem a variável metástase no componente vertical.}
+\label{tab:comparacao_reduzido}
+\begin{tabular}{@{}lrrrrr@{}}
+\toprule
+Modelo & Parâmetros & Log-verossimilhança & AIC & AICc & BIC \\
+\midrule
+Completo & 28 & $-4371{,}562$ & $8799{,}124$ & $8799{,}753$ & $8963{,}435$ \\
+Sem metástase na causa & 27 & $-4371{,}657$ & $8797{,}315$ & $8797{,}900$ & $8955{,}758$ \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+O modelo completo apresentou 28 parâmetros e log-verossimilhança de $-4371{,}562$, enquanto o reduzido apresentou 27 parâmetros e log-verossimilhança de $-4371{,}657$. A diferença entre os valores foi pequena, indicando que a inclusão de metástase no componente vertical produziu ganho muito limitado na qualidade do ajuste. Porém, os três critérios de informação favoreceram o modelo reduzido: o AIC passou de $8799{,}124$ para $8797{,}315$, o AICc de $8799{,}753$ para $8797{,}900$ e o BIC de $8963{,}435$ para $8955{,}758$.
+
+O teste de razão de verossimilhanças, com um grau de liberdade, obteve $p$-valor de $0{,}6626$. Portanto, não foram encontradas evidências estatísticas suficientes de que a inclusão desse coeficiente proporcionasse melhora no ajuste, ao nível de 5\%. Desse modo, dado o resultado do teste, os critérios de informação e a instabilidade observada anteriormente, optou-se por utilizar o modelo reduzido. 
+
+A Tabela~\ref{tab:regressao_k5_final} apresenta as estimativas do modelo reduzido, com cinco intervalos na distribuição dos tempos de ativação e sem a variável metástase no componente vertical. 
+
+
+\begin{table}[H]
+\centering
+\sf
+\caption{Estimativas do modelo de tempo de promoção com riscos competitivos e $K=5$ intervalos, sem a variável metástase no componente vertical.}
+\label{tab:regressao_k5_final}
+\begingroup
+\small
+\setlength{\tabcolsep}{2.6pt}
+\renewcommand{\arraystretch}{1.16}
+\begin{adjustbox}{max width=\textwidth}
+\begin{tabular}{@{}lrrrrrrrr@{}}
+\toprule
+Parâmetro & Estimativa & EP (H) & IC 95\% (H) & EP (L) & IC 95\% (L) & EP (B) & IC 95\% (B) & $p$-valor \\
+\midrule
+\multicolumn{9}{@{}l}{\textbf{Componente de tempo de promoção ($\gamma$)}} \\
+\addlinespace[2pt]
+$\gamma_{0}$ Intercepto & $-0{,}6396$ & $0{,}1356$ & $[-0{,}9053;\ -0{,}3739]$ & $0{,}1357$ & $[-0{,}9055;\ -0{,}3736]$ & $0{,}1370$ & $[-0{,}8593;\ -0{,}3430]$ & $<0{,}0001$ \\
+$\gamma_{1}$ Sexo feminino & $-0{,}0367$ & $0{,}0550$ & $[-0{,}1444;\ 0{,}0710]$ & $0{,}0550$ & $[-0{,}1444;\ 0{,}0710]$ & $0{,}0582$ & $[-0{,}1505;\ 0{,}0812]$ & $0{,}5042$ \\
+$\gamma_{2}$ Idade & $0{,}3552$ & $0{,}0292$ & $[0{,}2979;\ 0{,}4125]$ & $0{,}0292$ & $[0{,}2979;\ 0{,}4125]$ & $0{,}0326$ & $[0{,}2867;\ 0{,}4201]$ & $<0{,}0001$ \\
+$\gamma_{3}$ Ano & $-0{,}0871$ & $0{,}0285$ & $[-0{,}1430;\ -0{,}0312]$ & $0{,}0285$ & $[-0{,}1430;\ -0{,}0312]$ & $0{,}0300$ & $[-0{,}1423;\ -0{,}0290]$ & $0{,}0023$ \\
+$\gamma_{4}$ Atendimento SUS & $0{,}3807$ & $0{,}1011$ & $[0{,}1826;\ 0{,}5788]$ & $0{,}1011$ & $[0{,}1826;\ 0{,}5788]$ & $0{,}0978$ & $[0{,}1928;\ 0{,}5833]$ & $0{,}0002$ \\
+$\gamma_{5}$ Estágio II/III & $0{,}5662$ & $0{,}0782$ & $[0{,}4129;\ 0{,}7195]$ & $0{,}0782$ & $[0{,}4129;\ 0{,}7195]$ & $0{,}0790$ & $[0{,}4154;\ 0{,}7227]$ & $<0{,}0001$ \\
+$\gamma_{6}$ Estágio IV & $1{,}1566$ & $0{,}1666$ & $[0{,}8302;\ 1{,}4831]$ & $0{,}1666$ & $[0{,}8302;\ 1{,}4831]$ & $0{,}1801$ & $[0{,}8165;\ 1{,}4981]$ & $<0{,}0001$ \\
+$\gamma_{7}$ Metástase & $0{,}2798$ & $0{,}1582$ & $[-0{,}0303;\ 0{,}5900]$ & $0{,}1582$ & $[-0{,}0303;\ 0{,}5900]$ & $0{,}1729$ & $[-0{,}0610;\ 0{,}6335]$ & $0{,}0770$ \\
+$\gamma_{8}$ Radioterapia & $0{,}0264$ & $0{,}0672$ & $[-0{,}1054;\ 0{,}1582]$ & $0{,}0672$ & $[-0{,}1054;\ 0{,}1582]$ & $0{,}0704$ & $[-0{,}1106;\ 0{,}1668]$ & $0{,}6948$ \\
+$\gamma_{9}$ Quimioterapia & $0{,}4777$ & $0{,}0787$ & $[0{,}3235;\ 0{,}6319]$ & $0{,}0787$ & $[0{,}3235;\ 0{,}6319]$ & $0{,}0821$ & $[0{,}3075;\ 0{,}6226]$ & $<0{,}0001$ \\
+$\gamma_{10}$ Cirurgia & $-0{,}6705$ & $0{,}0596$ & $[-0{,}7874;\ -0{,}5536]$ & $0{,}0596$ & $[-0{,}7874;\ -0{,}5536]$ & $0{,}0630$ & $[-0{,}7936;\ -0{,}5511]$ & $<0{,}0001$ \\
+\addlinespace[3pt]
+\multicolumn{9}{@{}l}{\textbf{Taxas de ativação ($\lambda_k$)}} \\
+\addlinespace[2pt]
+$\lambda_{1}$ & $0{,}1139$ & $0{,}0098$ & $[0{,}0946;\ 0{,}1332]$ & $0{,}0099$ & $[0{,}0946;\ 0{,}1332]$ & $0{,}0109$ & $[0{,}0897;\ 0{,}1339]$ & -- \\
+$\lambda_{2}$ & $0{,}1841$ & $0{,}0165$ & $[0{,}1518;\ 0{,}2164]$ & $0{,}0165$ & $[0{,}1517;\ 0{,}2165]$ & $0{,}0178$ & $[0{,}1458;\ 0{,}2157]$ & -- \\
+$\lambda_{3}$ & $0{,}2044$ & $0{,}0193$ & $[0{,}1665;\ 0{,}2423]$ & $0{,}0194$ & $[0{,}1663;\ 0{,}2424]$ & $0{,}0219$ & $[0{,}1585;\ 0{,}2412]$ & -- \\
+$\lambda_{4}$ & $0{,}1902$ & $0{,}0204$ & $[0{,}1502;\ 0{,}2302]$ & $0{,}0205$ & $[0{,}1500;\ 0{,}2304]$ & $0{,}0245$ & $[0{,}1359;\ 0{,}2293]$ & -- \\
+$\lambda_{5}$ & $0{,}1057$ & $0{,}0161$ & $[0{,}0741;\ 0{,}1372]$ & $0{,}0162$ & $[0{,}0739;\ 0{,}1374]$ & $0{,}0196$ & $[0{,}0672;\ 0{,}1441]$ & -- \\
+\addlinespace[3pt]
+\multicolumn{9}{@{}l}{\textbf{Componente vertical -- distribuição das causas ($\beta$)}} \\
+\addlinespace[2pt]
+$\beta_{0}$ Intercepto & $-0{,}3439$ & $0{,}3391$ & $[-1{,}0086;\ 0{,}3208]$ & $0{,}3391$ & $[-1{,}0086;\ 0{,}3208]$ & $0{,}3197$ & $[-1{,}0572;\ 0{,}2134]$ & $0{,}3105$ \\
+$\beta_{t}$ Log do tempo & $0{,}6350$ & $0{,}0839$ & $[0{,}4706;\ 0{,}7994]$ & $0{,}0839$ & $[0{,}4706;\ 0{,}7994]$ & $0{,}1089$ & $[0{,}4488;\ 0{,}8797]$ & $<0{,}0001$ \\
+$\beta_{1}$ Sexo feminino & $0{,}1476$ & $0{,}1560$ & $[-0{,}1581;\ 0{,}4534]$ & $0{,}1560$ & $[-0{,}1581;\ 0{,}4534]$ & $0{,}1594$ & $[-0{,}1813;\ 0{,}4525]$ & $0{,}3439$ \\
+$\beta_{2}$ Idade & $0{,}2903$ & $0{,}0774$ & $[0{,}1386;\ 0{,}4419]$ & $0{,}0774$ & $[0{,}1386;\ 0{,}4419]$ & $0{,}0798$ & $[0{,}1313;\ 0{,}4534]$ & $0{,}0002$ \\
+$\beta_{3}$ Ano & $0{,}2374$ & $0{,}0831$ & $[0{,}0745;\ 0{,}4002]$ & $0{,}0831$ & $[0{,}0745;\ 0{,}4002]$ & $0{,}0852$ & $[0{,}0740;\ 0{,}4080]$ & $0{,}0043$ \\
+$\beta_{4}$ Atendimento SUS & $-0{,}3518$ & $0{,}2517$ & $[-0{,}8451;\ 0{,}1415]$ & $0{,}2517$ & $[-0{,}8451;\ 0{,}1415]$ & $0{,}2596$ & $[-0{,}8233;\ 0{,}2035]$ & $0{,}1621$ \\
+$\beta_{5}$ Estágio II/III & $-0{,}5735$ & $0{,}1859$ & $[-0{,}9379;\ -0{,}2092]$ & $0{,}1859$ & $[-0{,}9379;\ -0{,}2092]$ & $0{,}1756$ & $[-0{,}9175;\ -0{,}2145]$ & $0{,}0020$ \\
+$\beta_{6}$ Estágio IV & $-1{,}1579$ & $0{,}2218$ & $[-1{,}5926;\ -0{,}7231]$ & $0{,}2218$ & $[-1{,}5926;\ -0{,}7231]$ & $0{,}2346$ & $[-1{,}6451;\ -0{,}7401]$ & $<0{,}0001$ \\
+$\beta_{7}$ Radioterapia & $-0{,}3597$ & $0{,}2041$ & $[-0{,}7597;\ 0{,}0403]$ & $0{,}2041$ & $[-0{,}7597;\ 0{,}0403]$ & $0{,}2103$ & $[-0{,}7780;\ 0{,}0079]$ & $0{,}0780$ \\
+$\beta_{8}$ Quimioterapia & $-0{,}6669$ & $0{,}1899$ & $[-1{,}0392;\ -0{,}2947]$ & $0{,}1899$ & $[-1{,}0392;\ -0{,}2947]$ & $0{,}1970$ & $[-1{,}0474;\ -0{,}2909]$ & $0{,}0004$ \\
+$\beta_{9}$ Cirurgia & $-0{,}2868$ & $0{,}1814$ & $[-0{,}6423;\ 0{,}0687]$ & $0{,}1814$ & $[-0{,}6423;\ 0{,}0687]$ & $0{,}1788$ & $[-0{,}6470;\ 0{,}0434]$ & $0{,}1138$ \\
+\bottomrule
+\end{tabular}
+\end{adjustbox}
+\endgroup
+\end{table}
+
+
+Observa-se que as estimativas dos parâmetros $\bm\gamma$ e das taxas de ativação $\lambda_1,\ldots,\lambda_5$ permaneceram iguais às apresentadas na Tabela~\ref{tab:regressao_k5_completa}. Isso ocorre porque a alteração efetuada no modelo reduzido afeta apenas as causas competitivas, não modificando a especificação nem a estimação do componente de tempo de promoção. 
+
+No componente vertical, o coeficiente do estágio IV passou de $-1{,}4059$, no modelo completo, para $-1{,}1579$, no modelo reduzido, com erro-padrão de $0{,}2218$ pela Hessiana e por Louis e $0{,}2346$ pelo bootstrap. O intervalo de confiança pela Hessiana e Louis foram de 95\% foi $[-1{,}5926;\,-0{,}7231]$, e o intervalo percentil bootstrap foi $[-1{,}6451;\,-0{,}7401]$. A proximidade entre os três erros-padrão e entre os respectivos intervalos indica uma estimativa mais estável do que aquela obtida no modelo completo. A estimativa negativa corresponde a menores chances relativas de morte por outras causas, em comparação com o câncer ósseo, entre os pacientes em estágio IV que apresentam falha em determinado instante, considerando fixas as demais covariáveis.
+
+Os estágios II/III também apresentaram coeficiente negativo nesse componente ($-0{,}5735$; $p-$valor$=0{,}0020$), assim como a quimioterapia ($-0{,}6669$; $p-$valor$=0{,}0004$). Entretanto, o logaritmo do tempo ($0{,}6350$; $p<0{,}0001$), a idade padronizada ($0{,}2903$; $p-$valor$=0{,}0002$) e o ano do diagnóstico padronizado ($0{,}2374$; $p-$valor$=0{,}0043$) apresentaram coeficientes positivos. Isso indica que a composição relativa das causas de morte não é constante ao longo do acompanhamento e varia também conforme determinadas características dos pacientes. Não foram observadas evidências estatísticas suficientes de associação, ao nível de 5\%, para sexo, atendimento pelo SUS, radioterapia e cirurgia nesse componente. 
+
+Com base nas estimativas do modelo final, a sobrevivência populacional de cada indivíduo é obtida pela combinação do número esperado de causas latentes e da distribuição de ativação exponencial por partes:
+\begin{equation}
+\widehat S_{\mathrm{pop},i}(t)
+=\exp\!\left\{-\widehat\theta_i
+\left[1-\exp\!\left(-\sum_{k=1}^{5}\widehat\lambda_k e_k(t)\right)\right]\right\},
+\qquad
+\widehat p_{0i}=\exp(-\widehat\theta_i).
+\label{eq:aplicacao_pred_sobrevivencia}
+\end{equation}
+As probabilidades condicionais das causas são calculadas pela regressão logística reduzida e utilizadas, juntamente com a sobrevivência populacional, para obter as funções de incidência acumulada de morte por câncer ósseo e por outras causas. Essa estrutura permite representar tanto a probabilidade de permanecer livre das falhas modeladas quanto a probabilidade acumulada de cada causa de óbito ao longo do tempo.
+
+Para avaliar o comportamento geral do modelo selecionado, foram calculadas as funções de sobrevivência e de incidência acumulada previstas para cada paciente da amostra e, posteriormente, as médias dessas predições ao longo do acompanhamento. Esse procedimento considera as diferentes combinações de covariáveis observadas na população, em vez de representar apenas um indivíduo com características médias. A Figura~\ref{fig:figuras_gerais_K5} apresenta quatro imagens, sendo elas: (a) a comparação entre a estimativa de Kaplan-Meier e a sobrevivência média prevista pelo modelo; (b) as funções de incidência acumulada populacionais das duas causas; (c) a comparação da sobrevivência populacional com a sobrevivência dos suscetíveis e a fração de cura; e (d) as funções de incidência acumulada entre os indivíduos suscetíveis. 
+
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.9\linewidth]{images/figuras_gerais_K5_final.pdf}
+    \caption{Curvas de sobrevivência e funções de incidência acumulada estimadas pelo modelo vertical de tempo de promoção com \(K=5\) para a população geral de pacientes com câncer ósseo.}
+    \label{fig:figuras_gerais_K5}
+\end{figure}
+
+Na imagem (a) da Figura~\ref{fig:figuras_gerais_K5}, observa-se que a curva média de sobrevivência estimada pelo modelo acompanha de maneira próxima o comportamento da curva de Kaplan--Meier durante boa parte do acompanhamento, especialmente nos primeiros anos. Nos períodos mais longos, aparece uma pequena diferença entre as curvas, com a sobrevivência modelada permanecendo ligeiramente acima da estimativa não paramétrica. Essa comparação oferece uma avaliação descritiva da adequação da sobrevivência marginal estimada à trajetória observada na amostra.
+
+Na imagem (b), a incidência acumulada de morte por câncer ósseo cresce de maneira mais acentuada nos primeiros anos e permanece acima da incidência acumulada de morte por outras causas durante todo o acompanhamento. Ao final do tempo apresentado, as curvas se aproximam, respectivamente, de $0{,}50$ e $0{,}14$. Esse comportamento indica que o óbito por câncer ósseo possui maior incidência acumulada, enquanto as mortes por outras causas apresentam crescimento menor. 
+
+A imagem (c) separa a sobrevivência de toda a população daquela correspondente apenas aos indivíduos suscetíveis, definidos no modelo como aqueles com pelo menos uma causa latente. A sobrevivência dos suscetíveis diminui mais rapidamente, pois exclui o grupo associado à fração de cura. Já a curva populacional permanece em um nível mais acima, aproximando-se da fração de cura estimada pelo modelo. Para a amostra analisada, a média das probabilidades individuais de cura ficou próxima de $0{,}35$. 
+
+Por fim, na imagem (d), as incidências acumuladas são apresentadas condicionalmente à presença de pelo menos uma causa latente. Como a análise está restrita aos suscetíveis, essas probabilidades são maiores do que as incidências populacionais correspondentes. Ainda assim, a morte por câncer ósseo permanece como a causa predominante, evidenciando que a distinção entre população total e suscetíveis altera o nível das probabilidades estimadas, mas preserva o padrão geral de maior ocorrência de falhas atribuídas ao câncer ósseo.
+
+
+Além das curvas gerais, foram consideradas predições para dois perfis de pacientes, com diferentes características clínicas. O primeiro corresponde a um paciente em estágio I, sem metástase, e o segundo a uma paciente em estágio IV, com metástase.  A Tabela~\ref{tab:caracteristicas_perfis} reúne as informações utilizadas na obtenção das predições.
+
+
+
+\begin{table}[H]
+\centering
+\small
+\setlength{\tabcolsep}{5pt}
+\renewcommand{\arraystretch}{1.16}
+\caption{Características observadas dos dois perfis utilizados para as predições.}
+\label{tab:caracteristicas_perfis}
+\begin{tabular}{@{}lcc@{}}
+\toprule
+Característica & Perfil I & Perfil II \\
+\midrule
+Sexo & Masculino & Feminino \\
+Idade (anos) & 28 & 19 \\
+Ano do diagnóstico & 2012 & 2014 \\
+Tipo de atendimento & SUS & SUS \\
+Estágio clínico & I & IV \\
+Metástase & Não & Sim \\
+Radioterapia & Não & Sim \\
+Quimioterapia & Não & Sim \\
+Cirurgia & Não & Sim \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+O perfil I corresponde a um paciente do sexo masculino, com 28 anos de idade, diagnosticado em 2012, atendido pelo SUS, classificado no estágio I e sem metástase registrada. Além disso, considerou-se sem radioterapia, quimioterapia nem cirurgia. O perfil II corresponde a uma paciente do sexo feminino, com 19 anos de idade, diagnosticada em 2014, também atendida pelo SUS, porém classificada no estágio IV e com presença de metástase, tendo registro das três modalidades de tratamento. 
+
+Com a finalidade de quantificar a diferença na fração de cura entre esses perfis, calcularam-se as probabilidades $\widehat p_{0i}=\exp(-\widehat\theta_i)$ a partir do componente de tempo de promoção do modelo final. A incerteza dessas estimativas foi avaliada por intervalos percentis de confiança de 95\%, obtidos mediante 500 reamostragens bootstrap não paramétricas para cada perfil. A Tabela~\ref{tab:cura_perfis} apresenta as probabilidades estimadas, seus intervalos e o número de reamostragens válidas.
+
+
+\begin{table}[H]
+\centering
+\small
+\setlength{\tabcolsep}{5pt}
+\renewcommand{\arraystretch}{1.16}
+\caption{Probabilidades de cura estimadas para os dois perfis no modelo final com $K=5$.}
+\label{tab:cura_perfis}
+\begin{tabular}{@{}lrrr@{}}
+\toprule
+Perfil & Cura estimada & IC 95\% bootstrap & Reamostragens válidas \\
+\midrule
+Estágio I, sem metástase & $0{,}4693$ & $[0{,}3799;\ 0{,}5331]$ & 500 \\
+Estágio IV, com metástase & $0{,}1186$ & $[0{,}0598;\ 0{,}1770]$ & 500 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+Para o perfil I, a probabilidade de cura estimada foi de $0{,}4693$, com intervalo percentil bootstrap de 95\% igual a $[0{,}3799;\,0{,}5331]$. Para o perfil IV, essa probabilidade foi consideravelmente menor, $0{,}1186$, com intervalo de $[0{,}0598;\,0{,}1770]$. Todas as 500 reamostragens utilizadas em cada perfil foram válidas. A diferença entre as estimativas pontuais é de aproximadamente 35,1\%, indicando uma probabilidade prevista de permanecer livre das falhas modeladas substancialmente maior para o perfil I.
+
+A Figura~\ref{fig:figuras_estadio_I_K5} apresenta as funções previstas para o perfil I. Na imagem (a) a curva de Kaplan-Meier e a sobrevivência média ajustada foram calculadas para o conjunto dos pacientes classificados no estágio I, permitindo comparar o comportamento desse grupo com as estimativas do modelo. As imagens (b), (c) e (d) correspondem especificamente ao indivíduo descrito na Tabela~\ref{tab:cura_perfis} e apresentam, respectivamente, as incidências acumuladas populacionais, a sobrevivência populacional e entre suscetíveis e as incidências acumuladas condicionais. As faixas sombreadas representam intervalos percentis bootstrap de 95\% para as curvas individuais.
+
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.9\linewidth]{images/figuras_estadio_I_K5_final.pdf}
+    \caption{Curvas de sobrevivência e funções de incidência acumulada estimadas pelo modelo final com \(K=5\) para o perfil clínico em estágio I, sem metástase.}
+    \label{fig:figuras_estadio_I_K5}
+\end{figure}
+
+Na imagem (a) da Figura~\ref{fig:figuras_estadio_I_K5}, a sobrevivência média ajustada para os pacientes em estágio I apresenta comportamento semelhante ao da curva de Kaplan-Meier de quase todo o acompanhamento. Nos anos finais, a curva ajustada permanece acima da curva não paramétrica, indicando alguma diferença na cauda da distribuição. Essa comparação considera todos os pacientes do estágio I, e não a sobrevivência individual do perfil selecionado.
+
+Na imagem (b), observa-se que as duas funções de incidência acumulada do perfil I crescem de forma relativamente gradual e assumem valores próximos nos períodos mais longos, com a incidência de morte por câncer ósseo um pouco maior que a de outras causas. Esse resultado difere do comportamento da população geral, na qual a incidência de morte por câncer ósseo apresenta maior diferença. Na imagem (c), a sobrevivência populacional permanece acima daquela estimada apenas entre os suscetíveis, e a linha correspondente à fração de cura se situa em aproximadamente $0{,}47$, de acordo com a Tabela~\ref{tab:cura_perfis}. Por fim, na imagem (d), as incidências condicionais entre suscetíveis atingem valores maiores que as correspondentes incidências populacionais, refletindo a exclusão do grupo associado à cura. As faixas bootstrap mostram a incerteza das curvas estimadas para esse perfil, que praticamente se sobrepõe ao final do tempo do estudo.
+
+A Figura~\ref{fig:figuras_estadio_IV_K5} apresenta os mesmos quatro gráficos, mas para o perfil II, caracterizado pela presença de doença em estágio mais avançado e metástase. 
+
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.9\linewidth]{images/figuras_estadio_IV_K5_final.pdf}
+    \caption{Curvas de sobrevivência e funções de incidência acumulada estimadas pelo modelo final com \(K=5\) para o perfil clínico em estágio IV, com metástase.}
+    \label{fig:figuras_estadio_IV_K5}
+\end{figure}
+
+Na Figura~\ref{fig:figuras_estadio_IV_K5}, a imagem (a) evidencia uma queda mais rápida da sobrevivência durante os primeiros anos de acompanhamento, característica do grupo de pacientes em estágio IV. No início do acompanhamento, a curva média prevista tem valores próximos da curva de Kaplan-Meier. Nos períodos finais, a curva média prevista tem valor levemente menor. Em comparação com o estágio I, os níveis de sobrevivência são consideravelmente menores, o que faz sentido dado a maior gravidade clínica observada nesse grupo.
+
+A imagem (b) mostra que, para o perfil IV, a incidência acumulada de morte por câncer ósseo cresce intensamente nos primeiros anos e alcança valores elevados ao final do horizonte apresentado, enquanto a incidência de morte por outras causas permanece relativamente baixa.  Na imagem (c), a sobrevivência dos indivíduos suscetíveis diminui rapidamente, aproximando-se de zero, enquanto a sobrevivência populacional se estabiliza em nível um pouco maior, compatível com a fração de cura estimada de aproximadamente $0{,}12$. A imagem (d) mostra que, após o condicionamento à suscetibilidade, a incidência acumulada de morte por câncer ósseo permanece amplamente predominante. As faixas de confiança bootstrap permitem visualizar a incerteza das predições ao longo do tempo.
+
+Em conjunto, os resultados das Figuras~\ref{fig:figuras_gerais_K5} a~\ref{fig:figuras_estadio_IV_K5} mostram que o modelo selecionado reproduz os principais padrões de sobrevivência observados na amostra e permite distinguir as probabilidades de falha por câncer ósseo e por outras causas. A análise dos dois perfis evidencia diferenças importantes nas curvas previstas e na fração de cura, associadas às distintas características demográficas, clínicas e terapêuticas desses pacientes. 
+
+
+\section{Discussão}
+
+O presente estudo investigou o tempo até a morte de pacientes com neoplasias malignas dos ossos e das cartilagens articulares, considerando a presença de riscos competitivos e de uma fração de cura na população. Os resultados mostraram que a morte por câncer ósseo foi o evento predominante, principalmente nos primeiros anos de acompanhamento. As funções de incidência acumulada evidenciaram diferenças importantes dependendo das características dos pacientes, especialmente em relação ao estágio clínico e à presença de metástase. Esses achados reforçam a importância de considerar os riscos competitivos na análise de sobrevivência, uma vez que a ocorrência de morte por outras causas interfere na probabilidade acumulada de morte pela doença de interesse.
+
+O estágio clínico apresentou associação importante com a sobrevivência e a fração de cura estimada. Pacientes em estágios mais avançados apresentaram maior incidência acumulada de morte por câncer ósseo e menor probabilidade de cura, conforme indicado pelos coeficientes positivos do componente de tempo de promoção. A idade também apresentou associação com menores probabilidades de cura, enquanto diagnósticos em anos mais recentes estiveram associados a maiores probabilidades estimadas. Esses resultados são consistentes com estudos anteriores que identificaram a idade, a extensão da doença e a presença de metástase como fatores relacionados ao prognóstico de pacientes com neoplasias ósseas \citep{duchman2015prognostic, song2018prognostic,zhou2023prognostic}. Em relação aos tratamentos, foram observadas associações com a quimioterapia e a cirurgia, embora esses resultados não devam ser interpretados diretamente, dado que a indicação de tratamento depende das condições clínicas dos pacientes.
+
+A aplicação do modelo vertical de tempo de promoção permitiu distinguir os fatores associados à ocorrência global das falhas daqueles relacionados à distribuição relativa das causas de morte. No componente vertical, o coeficiente positivo do logaritmo do tempo indicou que as chances relativas de morte por outras causas, em comparação com a morte por câncer ósseo, aumentaram ao longo do acompanhamento. Por outro lado, os estágios mais avançados apresentaram maior participação relativa da morte por câncer ósseo. Esses resultados mostram uma característica central da modelagem vertical proposta por \cite{nicolaie2010vertical}, que permite representar separadamente a distribuição do tempo até a falha e a probabilidade condicional de cada causa.
+
+Na estimação do modelo, a distribuição exponencial por partes com cinco intervalos foi selecionada pelo critério BIC, permitindo representar mudanças nas taxas de ativação ao longo do acompanhamento. Entretanto, a inclusão simultânea de estágio IV e metástase no componente vertical produziu estimativas instáveis, com erros-padrão bootstrap consideravelmente superiores aos obtidos pela Hessiana e por Louis. A retirada de metástase desse componente resultou em estimativas mais estáveis, sem evidências de perda significativa na qualidade do ajuste. Além disso, a proximidade entre os erros-padrão da Hessiana e de Louis indicou concordância entre os dois procedimentos de cálculo da informação observada, enquanto o bootstrap permitiu avaliar de forma complementar a variabilidade dos estimadores.
+
+As curvas previstas pelo modelo final apresentaram comportamento próximo ao da sobrevivência não paramétrica durante grande parte do acompanhamento. A média das probabilidades individuais de cura foi próxima de 0,35, enquanto as estimativas para os perfis selecionados foram de 0,4693 para o paciente em estágio I, sem metástase, e de 0,1186 para a paciente em estágio IV, com metástase. Esses resultados mostram a capacidade do modelo de representar diferentes padrões de sobrevivência e incidência acumulada conforme as características individuais. Diferentemente da abordagem de \cite{Nicolaie2019}, que utiliza um modelo de cura por mistura, a formulação adotada determina a fração de cura diretamente a partir da distribuição Poisson do número de causas latentes, integrando sua estimação à distribuição dos tempos de falha.
+
+Apesar desses resultados, algumas limitações devem ser consideradas. A elevada proporção de informações ausentes, principalmente nas variáveis estágio clínico e metástase, resultou em uma redução considerável da amostra, podendo comprometer sua representatividade. Além disso, a estimação da fração de cura depende das hipóteses da distribuição Poisson, da especificação dos tempos de ativação e da disponibilidade de acompanhamento suficiente para identificar a estabilização da sobrevivência. Como o modelo considera morte por câncer ósseo e morte por outras causas, a fração de cura representa a probabilidade estatística de permanecer livre das falhas modeladas, não devendo ser interpretada diretamente como cura clínica do câncer, além de ser interpretada com cautela, dado que nenhum indivíduo está isento de morte por qualquer outra causa.
+
+Como possíveis extensões, estudos futuros poderiam considerar métodos para lidar com informações ausentes, a inclusão de covariáveis dependentes do tempo e a incorporação de efeitos espaciais, permitindo investigar possíveis diferenças na sobrevivência e na fração de cura entre as regiões do estado de São Paulo. Além disso, poderiam ser exploradas abordagens bayesianas para a estimação dos parâmetros e formulações alternativas para a fração de cura, utilizando distribuições defeituosas, incluindo a distribuição Gompertz defeituosa.
+
+
+\section{Conclusão}
+
+Este estudo teve como objetivo investigar a sobrevivência de pacientes com neoplasias malignas dos ossos e das cartilagens articulares, considerando a presença de riscos competitivos e a possibilidade de uma fração de cura na população. A análise mostrou que a morte por câncer ósseo foi o evento predominante, especialmente nos primeiros anos de acompanhamento, e que características como idade e estágio clínico estiveram associadas à distribuição dos tempos de sobrevivência e às probabilidades de cura estimadas.
+
+A aplicação do modelo vertical de tempo de promoção permitiu representar conjuntamente a sobrevivência populacional, a fração de cura e as funções de incidência acumulada das causas competitivas. A separação entre o componente de tempo de promoção e o componente vertical possibilitou distinguir as covariáveis associadas à ocorrência global das falhas daquelas relacionadas à distribuição relativa das causas de morte. Além disso, a comparação entre os procedimentos de estimação dos erros-padrão e a análise da estabilidade dos coeficientes contribuíram para a avaliação da precisão dos resultados.
+
+De maneira geral, os resultados indicam que a combinação do mecanismo de tempo de promoção com a modelagem vertical constitui uma alternativa para a análise de sobrevivência com riscos competitivos e fração de cura, permitindo incorporar diferentes características dos pacientes e representar a heterogeneidade das probabilidades de falha ao longo do acompanhamento. Entretanto, a interpretação das estimativas deve considerar as hipóteses do modelo e as limitações relacionadas aos dados utilizados, especialmente quanto à definição estatística da fração de cura e à disponibilidade das informações clínicas.
+
+
+\section{Disponibilidade de dados e código}
+
+Os dados utilizados neste estudo são públicos e provenientes do Registro Hospitalar de Câncer do Estado de São Paulo (RHC/SP), disponibilizado pela Fundação Oncocentro de São Paulo (FOSP), por meio do endereço \url{https://fosp.saude.sp.gov.br/fosp/diretoria-adjunta-de-informacao-e-epidemiologia/rhc-registro-hospitalar-de-cancer/download-de-arquivos/}. Foram consideradas as bases referentes ao período de 2000 a 2022, disponibilizadas originalmente no formato DBF, que abrangem registros de diferentes tipos de câncer em todo o estado de São Paulo. Devido ao tamanho desses arquivos, as bases originais não foram incluídas no repositório do projeto, podendo ser obtidas diretamente no site da FOSP.
+
+Os códigos utilizados no processamento dos dados, nas análises estatísticas e no ajuste do modelo estão disponíveis no repositório \url{https://github.com/CarolyneBrito/Vertical_promotion}. O repositório também contém a base de dados filtrada e tratada, denominada \texttt{dados\_ossos.csv}, localizada na pasta \texttt{Banco de Dados}, com os registros selecionados para o estudo.  
+
+
+\bibliographystyle{apalike}
+\bibliography{ref}
+
+
+
+
+
+
+
+
+
+\end{document}
