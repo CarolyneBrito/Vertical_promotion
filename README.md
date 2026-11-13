@@ -44,6 +44,7 @@ Na pasta `Resultados_codigo` estão organizados os produtos gerados pela aplica�
 Os scripts foram escritos em R e devem ser executados na seguinte ordem:
 
 | Ordem | Programa | Descrição |
+|:--:|---|---|
 | **1** | `01_importacao_limpeza.R` | Download dos arquivos oficiais da FOSP, importação dos dados `.DBF`, seleção dos registros de câncer ósseo (C40/C41), limpeza e organização da base; ao final, gera e salva `dados_ossos.csv`. |
 | **2** | `02_analise_descritiva.R` | Análise descritiva e exploratória da base tratada, incluindo tabelas, figuras e análises não paramétricas de sobrevivência e riscos competitivos. |
 | **3** | `03_modelagem.R` | Ajuste do modelo vertical de tempo de promoção com fração de cura, comparação de especificações, estimação dos parâmetros e erros-padrão, bootstrap, predições e resultados da aplicação. |
