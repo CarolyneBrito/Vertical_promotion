@@ -33,7 +33,7 @@ Vertical_promotion/
 └── Resultados_codigo/
     ├── tabelas de resultados (.csv)
     ├── objetos e resultados da aplicação (.rds)
-    └── figuras da aplicação (.pdf)
+    └── figuras da modelagem na aplicação (.pdf)
 ```
 Os itens descritivos de `Resultados_codigo/` representam grupos de arquivos, não nomes literais de arquivos.
 
