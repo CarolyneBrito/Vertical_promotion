@@ -857,10 +857,8 @@ tabela_bootstrap_validos <- data.frame(
   falhas = B_BOOT - c(boot_completo$successful, boot_final_1$successful, boot_final_2$successful))
 
 print(tabela_bootstrap_validos, row.names = FALSE)
-write.csv(
-  tabela_bootstrap_validos,
-  "diagnostico_bootstrap_validos.csv",
-  row.names = FALSE)
+write.csv(tabela_bootstrap_validos, "diagnostico_bootstrap_validos.csv",
+          row.names = FALSE)
 
 # 7. Tabelas dos perfis e probabilidades de cura 
 tabela_perfis <- do.call(rbind, lapply(names(perfis), function(nm) {
@@ -1069,11 +1067,3 @@ print(list(
 ))
 
 saveRDS(fit_final, 'modelo_final_K5_sem_m_na_causa.rds')
-
-
-
-#######################
-# IC 95% das taxas lambda na escala logaritmica
-# ep_log_lambda <- sqrt(diag(V_u)[idx_lambda])
-# table$lower.95[idx_lambda] <- exp(log(object$lambda) - 1.96 * ep_log_lambda)
-# table$upper.95[idx_lambda] <- exp(og(object$lambda) + 1.96 * ep_log_lambda)
